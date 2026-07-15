@@ -1,0 +1,33 @@
+<%- include('../partials/header') %>
+  <!-- Hui Xing, Wei Qi, Jun Hao — Claim Verification (enhancement): staff-only
+       list of pending claims, from routes/claims.js GET /claims. Each claim
+       has an Approve/Reject button posting to POST /claims/:id/review. -->
+  <h1>Pending Claims</h1>
+
+  <% if (claims.length === 0) { %>
+    <p>No pending claims right now.</p>
+  <% } %>
+
+  <ul class="item-list">
+    <% claims.forEach(claim => { %>
+      <li>
+        <div>
+          <strong><%= claim.item_name %></strong> claimed by <%= claim.claimant_username %>
+          <div style="font-size:0.85rem; color:var(--text-muted);">
+            <%= claim.proof_description %>
+          </div>
+        </div>
+        <div>
+          <form action="/claims/<%= claim.claim_id %>/review" method="POST" style="display:inline;">
+            <input type="hidden" name="decision" value="approved">
+            <button type="submit" class="btn">Approve</button>
+          </form>
+          <form action="/claims/<%= claim.claim_id %>/review" method="POST" style="display:inline;">
+            <input type="hidden" name="decision" value="rejected">
+            <button type="submit" class="btn btn-danger">Reject</button>
+          </form>
+        </div>
+      </li>
+    <% }) %>
+  </ul>
+<%- include('../partials/footer') %>

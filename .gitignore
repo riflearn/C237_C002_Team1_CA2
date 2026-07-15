@@ -1,0 +1,14 @@
+# Dependencies (each person runs npm install locally)
+node_modules/
+
+# Local secrets — every teammate has their own .env, never committed
+.env
+
+# Assignment paperwork (spec, development journal, technical plan) —
+# course/personal documents, not code, submitted separately via LMS.
+*.docx
+*.pdf
+
+# Snapshot/backup zips (e.g. lost-found-tracker.zip) — these can contain a
+# full copy of node_modules and the real .env with live credentials in it.
+*.zip

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lost & Found Tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div>
+      <span class="brand">Lost &amp; Found Tracker</span>
+      <% if (user) { %>
+        <a href="/items">Items</a>
+        <% if (user.role === 'admin') { %>
+          <a href="/claims">Claims</a>
+        <% } %>
+      <% } %>
+    </div>
+    <div>
+      <% if (user) { %>
+        <span>Hi, <%= user.username %> (<%= user.role %>)</span>
+        <form action="/logout" method="POST" style="display:inline;">
+          <button type="submit" class="btn" style="margin-left:1rem;">Log out</button>
+        </form>
+      <% } else { %>
+        <a href="/login">Log in</a>
+        <a href="/register">Register</a>
+      <% } %>
+    </div>
+  </nav>
+  <div class="container">

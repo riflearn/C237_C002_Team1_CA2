@@ -1,0 +1,44 @@
+<%- include('../partials/header') %>
+  <div class="card">
+    <h1>Edit item</h1>
+
+    <!-- TODO (Soe San): this form mirrors views/items/new.ejs — same fields,
+         same order — but pre-filled with the `item` object passed from
+         routes/edit.js, and posting to /items/:id/edit instead. -->
+
+    <!-- Soe San: uncommented and wired up below — same field set/order as
+         Shernice's views/items/new.ejs, pre-filled from `item`, and each
+         <option> marked selected when it matches the item's current
+         category so the dropdown doesn't reset on every edit. -->
+    <% if (error) { %>
+      <p class="error"><%= error %></p>
+    <% } %>
+
+    <form action="/items/<%= item.item_id %>/edit" method="POST">
+      <label for="item_name">Item name</label>
+      <input type="text" id="item_name" name="item_name" value="<%= item.item_name %>" required>
+
+      <label for="category">Category</label>
+      <select id="category" name="category" required>
+        <option value="">Select a category</option>
+        <option <%= item.category === 'Electronics' ? 'selected' : '' %>>Electronics</option>
+        <option <%= item.category === 'Clothing' ? 'selected' : '' %>>Clothing</option>
+        <option <%= item.category === 'Documents' ? 'selected' : '' %>>Documents</option>
+        <option <%= item.category === 'Accessories' ? 'selected' : '' %>>Accessories</option>
+        <option <%= item.category === 'Bags' ? 'selected' : '' %>>Bags</option>
+        <option <%= item.category === 'Others' ? 'selected' : '' %>>Others</option>
+      </select>
+
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="3"><%= item.description %></textarea>
+
+      <label for="location_found">Location found</label>
+      <input type="text" id="location_found" name="location_found" value="<%= item.location_found %>" required>
+
+      <label for="date_found">Date found</label>
+      <input type="date" id="date_found" name="date_found" value="<%= item.date_found %>" required>
+
+      <button type="submit" class="btn">Save changes</button>
+    </form>
+  </div>
+<%- include('../partials/footer') %>

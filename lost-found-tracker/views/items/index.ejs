@@ -1,0 +1,47 @@
+<%- include('../partials/header') %>
+  <h1>Found Items</h1>
+
+  <!-- TODO (Jun Hao): filter form, submitting as GET so query params show
+       up in the URL and match what routes/items.js reads from req.query -->
+  <form class="filters" action="/items" method="GET">
+    <input type="text" name="q" placeholder="Search...">
+    <select name="category">
+      <option value="">All categories</option>
+      <option>Electronics</option>
+      <option>Clothing</option>
+      <option>Documents</option>
+      <option>Accessories</option>
+      <option>Bags</option>
+      <option>Others</option>
+    </select>
+    <select name="status">
+      <option value="">Any status</option>
+      <option value="unclaimed">Unclaimed</option>
+      <option value="pending">Pending</option>
+      <option value="claimed">Claimed</option>
+    </select>
+    <button type="submit" class="btn">Filter</button>
+  </form>
+
+  <!-- TODO (Hui Xing): loop over the `items` array passed from routes/items.js -->
+  <!-- Hui Xing: uncommented below — renders each row from the `items` array
+       passed in from routes/items.js. That query has already applied Jun
+       Hao's filters (category/location/status/q) by the time it gets here,
+       so this loop just displays whatever came back. -->
+  <ul class="item-list">
+    <% items.forEach(item => { %>
+      <li>
+        <div>
+          <strong><%= item.item_name %></strong> — <%= item.category %>
+          <div style="font-size:0.85rem; color:var(--text-muted);">
+            <%= item.location_found %> &middot; <%= item.date_found %>
+          </div>
+        </div>
+        <span class="status-badge status-<%= item.status %>"><%= item.status %></span>
+        <a href="/items/<%= item.item_id %>" class="btn">View</a>
+      </li>
+    <% }) %>
+  </ul>
+
+  <a href="/items/new" class="btn">+ Report a found item</a>
+<%- include('../partials/footer') %>
