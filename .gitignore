@@ -12,3 +12,6 @@ node_modules/
 # Snapshot/backup zips (e.g. lost-found-tracker.zip) — these can contain a
 # full copy of node_modules and the real .env with live credentials in it.
 *.zip
+
+# Personal presentation/study prep — not part of the app, not shared via repo.
+presentation-prep/
