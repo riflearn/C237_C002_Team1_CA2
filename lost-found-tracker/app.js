@@ -29,6 +29,11 @@ const connection = mysql.createConnection({
   // Return DATE columns (items.date_found) as plain 'YYYY-MM-DD' strings
   // instead of JS Date objects, so views can print/pre-fill them directly.
   dateStrings: true,
+  // Cloud MySQL (e.g. Azure Database for MySQL) requires an encrypted
+  // connection; local MySQL doesn't need or expect this. Opt-in per person
+  // via DB_SSL=true in your own .env, so switching to a cloud DB doesn't
+  // break teammates still running MySQL locally.
+  ...(process.env.DB_SSL === 'true' ? { ssl: { rejectUnauthorized: true } } : {}),
 });
 
 connection.connect((err) => {

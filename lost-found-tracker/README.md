@@ -3,13 +3,20 @@
 ## Setup
 
 1.  `npm install`
-2.  Copy `.env.example` to `.env` and fill in **your own** local MySQL
-    `DB_USER`/`DB_PASSWORD`. `.env` is gitignored — it stays on your machine
-    only, so everyone can use their own local MySQL credentials without
+2.  Copy `.env.example` to `.env` and fill in **your own** local MySQL  
+    `DB_USER`/`DB_PASSWORD`. `.env` is gitignored — it stays on your machine  
+    only, so everyone can use their own local MySQL credentials without  
     ever committing a real password.
 3.  Run `lost_found_schema.sql` against your MySQL instance (creates the  
     tables and two test accounts).
 4.  `npm run dev` (or `npm start`) — runs on http://localhost:3000
+
+**Using the shared Azure database instead of local MySQL?** Set `DB_HOST`/  
+`DB_USER`/`DB_PASSWORD`/`DB_NAME` to your Azure values and add `DB_SSL=true`  
+to your `.env` — Azure requires an encrypted connection, which `app.js` only  
+enables when `DB_SSL=true` (so it doesn't break anyone still on local MySQL,  
+which doesn't need it). Skip step 3 if the database/tables already exist on  
+the shared server.
 
 ## Test accounts (from the seed data)
 
