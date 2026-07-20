@@ -1,4 +1,5 @@
 // Lost & Found Tracker — C237 CA2
+// Version: 1.0.0
 // Single-file backend: every GET/POST route lives in this file, grouped by
 // feature under the section banners below (each banner names its owner —
 // same people as before, just no longer split into separate routes/*.js
