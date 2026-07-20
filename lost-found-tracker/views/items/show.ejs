@@ -6,6 +6,11 @@
          to Soe San's edit route, Wei Qi's delete route, and Jun Hao's claim
          form (only one of these should ever show for a given user/status). -->
     <h1><%= item.item_name %></h1>
+    <% if (item.image) { %>
+      <!-- Shernice's Image Upload feature: display-only here, since the
+         upload itself only happens at creation time. -->
+      <img src="/images/<%= item.image %>" alt="<%= item.item_name %>" style="max-width:100%; border-radius:var(--radius); margin-bottom:1rem;">
+    <% } %>
     <p class="status-badge status-<%= item.status %>"><%= item.status %></p>
     <p><%= item.description %></p>
     <p><strong>Location:</strong> <%= item.location_found %></p>

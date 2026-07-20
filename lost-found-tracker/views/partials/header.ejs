@@ -12,6 +12,7 @@
       <span class="brand">Lost &amp; Found Tracker</span>
       <% if (user) { %>
         <a href="/items">Items</a>
+        <a href="/items/search">Search</a>
         <% if (user.role === 'admin') { %>
           <a href="/claims">Claims</a>
         <% } %>
@@ -19,7 +20,7 @@
     </div>
     <div>
       <% if (user) { %>
-        <span>Hi, <%= user.username %> (<%= user.role %>)</span>
+        <a href="/profile">Hi, <%= user.username %> (<%= user.role %>)</a>
         <form action="/logout" method="POST" style="display:inline;">
           <button type="submit" class="btn" style="margin-left:1rem;">Log out</button>
         </form>

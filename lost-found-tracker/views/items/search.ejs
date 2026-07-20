@@ -1,0 +1,61 @@
+<%- include('../partials/header') %>
+  <!-- Jun Hao — Search & Filter, split into its own route/view (was
+       merged into Hui Xing's /items page). + Autocomplete (native
+       <datalist>, zero client-side JS) & Recent Searches. -->
+  <h1>Search Items</h1>
+
+  <form class="filters" action="/items/search" method="GET">
+    <input type="text" name="q" list="item-names" placeholder="Search..." value="<%= query.q || '' %>">
+    <!-- Autocomplete: the browser suggests matching item names from this
+         <datalist> as you type — no fetch, no JavaScript. -->
+    <datalist id="item-names">
+      <% itemNames.forEach(name => { %>
+        <option value="<%= name %>">
+      <% }) %>
+    </datalist>
+
+    <select name="category">
+      <option value="">All categories</option>
+      <option <%= query.category === 'Electronics' ? 'selected' : '' %>>Electronics</option>
+      <option <%= query.category === 'Clothing' ? 'selected' : '' %>>Clothing</option>
+      <option <%= query.category === 'Documents' ? 'selected' : '' %>>Documents</option>
+      <option <%= query.category === 'Accessories' ? 'selected' : '' %>>Accessories</option>
+      <option <%= query.category === 'Bags' ? 'selected' : '' %>>Bags</option>
+      <option <%= query.category === 'Others' ? 'selected' : '' %>>Others</option>
+    </select>
+    <select name="status">
+      <option value="">Any status</option>
+      <option value="unclaimed" <%= query.status === 'unclaimed' ? 'selected' : '' %>>Unclaimed</option>
+      <option value="pending" <%= query.status === 'pending' ? 'selected' : '' %>>Pending</option>
+      <option value="claimed" <%= query.status === 'claimed' ? 'selected' : '' %>>Claimed</option>
+    </select>
+    <button type="submit" class="btn">Search</button>
+  </form>
+
+  <% if (recentSearches.length > 0) { %>
+    <p style="font-size:0.9rem; color:var(--text-muted);">
+      Recent searches:
+      <% recentSearches.forEach(term => { %>
+        <a href="/items/search?q=<%= encodeURIComponent(term) %>" style="margin-right:0.75rem;"><%= term %></a>
+      <% }) %>
+    </p>
+  <% } %>
+
+  <ul class="item-list">
+    <% items.forEach(item => { %>
+      <li>
+        <div>
+          <strong><%= item.item_name %></strong> — <%= item.category %>
+          <div style="font-size:0.85rem; color:var(--text-muted);">
+            <%= item.location_found %> &middot; <%= item.date_found %>
+          </div>
+        </div>
+        <span class="status-badge status-<%= item.status %>"><%= item.status %></span>
+        <a href="/items/<%= item.item_id %>" class="btn">View</a>
+      </li>
+    <% }) %>
+  </ul>
+  <% if (items.length === 0) { %>
+    <p>No items match your search.</p>
+  <% } %>
+<%- include('../partials/footer') %>

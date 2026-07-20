@@ -9,9 +9,25 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const mysql = require('mysql2');
+const multer = require('multer');
 const path = require('path');
 
 const app = express();
+
+// ----- File upload storage (Shernice — Image Upload) -----
+// Same multer.diskStorage pattern as C237L17's SupermarketApp. Filenames
+// get a timestamp prefix so two people uploading a photo with the same
+// original filename (e.g. "photo.jpg") don't overwrite each other.
+const imageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, 'public/images');
+    },
+    filename: (req, file, cb) => {
+      cb(null, Date.now() + '-' + file.originalname);
+    },
+  }),
+});
 
 // ----- MySQL connection -----
 // Callback-style connection (not a pool, not mysql2/promise) — same
@@ -161,7 +177,98 @@ app.post('/logout', (req, res) => {
 });
 
 // ===================================================================
+// Firdaus — My Profile / Account Settings
+// Personalisation feature: view/edit your own account, optionally change
+// your password. Only ever reads/writes the logged-in user's own row.
+// ===================================================================
+
+// GET /profile — show the logged-in user's own account details
+app.get('/profile', isLoggedIn, (req, res) => {
+  const sql = 'SELECT user_id, username, email, role FROM users WHERE user_id = ?';
+
+  connection.query(sql, [req.session.user.user_id], (error, results) => {
+    if (error) {
+      console.error('Database query error:', error.message);
+      return res.status(500).send('Something went wrong. Please try again.');
+    }
+    res.render('profile', { profileUser: results[0], error: null, success: null });
+  });
+});
+
+// POST /profile — update own email, optionally change password
+app.post('/profile', isLoggedIn, (req, res) => {
+  const { email, current_password, new_password } = req.body;
+  const userId = req.session.user.user_id;
+
+  if (!email) {
+    return res.render('profile', {
+      profileUser: { ...req.session.user, email },
+      error: 'Email is required.',
+      success: null,
+    });
+  }
+
+  // Changing the password is optional — only touch it if a new one was
+  // actually entered. If it was, the current password must be verified
+  // first, same SHA1-comparison pattern as login, just scoped to this
+  // one account.
+  if (new_password) {
+    if (!current_password) {
+      return res.render('profile', {
+        profileUser: { ...req.session.user, email },
+        error: 'Enter your current password to set a new one.',
+        success: null,
+      });
+    }
+
+    const verifySql = 'SELECT user_id FROM users WHERE user_id = ? AND password = SHA1(?)';
+    connection.query(verifySql, [userId, current_password], (verifyErr, verifyResults) => {
+      if (verifyErr) {
+        console.error('Database query error:', verifyErr.message);
+        return res.status(500).send('Something went wrong. Please try again.');
+      }
+      if (verifyResults.length === 0) {
+        return res.render('profile', {
+          profileUser: { ...req.session.user, email },
+          error: 'Current password is incorrect.',
+          success: null,
+        });
+      }
+
+      const updateSql = 'UPDATE users SET email = ?, password = SHA1(?) WHERE user_id = ?';
+      connection.query(updateSql, [email, new_password, userId], (updateErr) => {
+        if (updateErr) {
+          console.error('Database query error:', updateErr.message);
+          return res.status(500).send('Something went wrong. Please try again.');
+        }
+        res.render('profile', {
+          profileUser: { ...req.session.user, email },
+          error: null,
+          success: 'Profile updated.',
+        });
+      });
+    });
+    return;
+  }
+
+  // No password change requested — just update the email.
+  const updateSql = 'UPDATE users SET email = ? WHERE user_id = ?';
+  connection.query(updateSql, [email, userId], (updateErr) => {
+    if (updateErr) {
+      console.error('Database query error:', updateErr.message);
+      return res.status(500).send('Something went wrong. Please try again.');
+    }
+    res.render('profile', {
+      profileUser: { ...req.session.user, email },
+      error: null,
+      success: 'Profile updated.',
+    });
+  });
+});
+
+// ===================================================================
 // Shernice — Report a Found Item (Create)
+// + Image Upload (attach a photo when reporting an item)
 // ===================================================================
 
 // GET /items/new — show the "report a found item" form
@@ -170,7 +277,10 @@ app.get('/items/new', isLoggedIn, (req, res) => {
 });
 
 // POST /items/new — insert the new item into the database
-app.post('/items/new', isLoggedIn, (req, res) => {
+// imageUpload.single('image') runs first: parses the multipart form,
+// saves the uploaded file (if any) to public/images, and makes it
+// available as req.file — same middleware pattern as L17's SupermarketApp.
+app.post('/items/new', isLoggedIn, imageUpload.single('image'), (req, res) => {
   const { item_name, category, description, location_found, date_found } = req.body;
 
   // description is optional (its textarea has no `required`); everything
@@ -179,15 +289,19 @@ app.post('/items/new', isLoggedIn, (req, res) => {
     return res.render('items/new', { error: 'Please fill in all required fields.' });
   }
 
+  // A photo is optional — req.file only exists if one was actually
+  // uploaded. Store just the filename, not the full path.
+  const image = req.file ? req.file.filename : null;
+
   // reported_by always comes from the logged-in session, never the form —
   // otherwise a student could submit an item and claim someone else found it.
   const sql = `INSERT INTO items
-      (item_name, category, description, location_found, date_found, reported_by)
-    VALUES (?, ?, ?, ?, ?, ?)`;
+      (item_name, category, description, location_found, date_found, reported_by, image)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
   connection.query(
     sql,
-    [item_name, category, description || null, location_found, date_found, req.session.user.user_id],
+    [item_name, category, description || null, location_found, date_found, req.session.user.user_id, image],
     (error) => {
       if (error) {
         console.error('Database query error:', error.message);
@@ -200,11 +314,66 @@ app.post('/items/new', isLoggedIn, (req, res) => {
 
 // ===================================================================
 // Hui Xing — Browse & View Items (Read)
-// Jun Hao — Search & Filter (built into the GET /items query below)
+// + Pagination & Sorting
 // ===================================================================
 
-// GET /items — list all found items, optionally filtered
+// GET /items — list found items, paginated and sortable
 app.get('/items', isLoggedIn, (req, res) => {
+  // ORDER BY's column name can't be passed as a `?` placeholder — those
+  // only work for values, not identifiers — so req.query.sort is checked
+  // against a fixed allowlist before ever touching the SQL string. Never
+  // interpolate unvalidated user input into a query, even just a column name.
+  const allowedSortColumns = ['created_at', 'date_found', 'item_name', 'status'];
+  const sortColumn = allowedSortColumns.includes(req.query.sort) ? req.query.sort : 'created_at';
+  const sortDirection = req.query.dir === 'asc' ? 'ASC' : 'DESC';
+
+  const perPage = 5;
+  const page = Math.max(parseInt(req.query.page) || 1, 1);
+  const offset = (page - 1) * perPage;
+
+  const countSql = "SELECT COUNT(*) AS total FROM items WHERE status != 'removed'";
+  connection.query(countSql, (countErr, countResults) => {
+    if (countErr) {
+      console.error('Database query error:', countErr.message);
+      return res.status(500).send('Something went wrong. Please try again.');
+    }
+
+    const totalItems = countResults[0].total;
+    const totalPages = Math.max(Math.ceil(totalItems / perPage), 1);
+
+    // Hide soft-deleted items — Wei Qi's delete route flips status to
+    // 'removed' instead of deleting the row outright, so without this
+    // filter "deleted" items would still show up here.
+    const sql = `SELECT * FROM items WHERE status != 'removed'
+      ORDER BY ${sortColumn} ${sortDirection} LIMIT ? OFFSET ?`;
+
+    connection.query(sql, [perPage, offset], (error, results) => {
+      if (error) {
+        console.error('Database query error:', error.message);
+        return res.status(500).send('Something went wrong. Please try again.');
+      }
+      res.render('items/index', {
+        items: results,
+        page,
+        totalPages,
+        sort: sortColumn,
+        dir: sortDirection.toLowerCase(),
+      });
+    });
+  });
+});
+
+// ===================================================================
+// Jun Hao — Search & Filter
+// + Autocomplete (native <datalist>) & Recent Searches
+//
+// Registered before GET /items/:id on purpose — Express matches routes
+// in the order they're declared, and /items/:id would otherwise treat
+// "search" as an item ID and swallow every request to this route first.
+// ===================================================================
+
+// GET /items/search — search/filter items, with autocomplete + recent searches
+app.get('/items/search', isLoggedIn, (req, res) => {
   const { category, location, status, q } = req.query;
   let sql = 'SELECT * FROM items WHERE 1=1';
   const params = [];
@@ -223,9 +392,6 @@ app.get('/items', isLoggedIn, (req, res) => {
     sql += ' AND status = ?';
     params.push(status);
   } else {
-    // Hide soft-deleted items by default — Wei Qi's delete route below
-    // flips status to 'removed' instead of deleting the row outright, so
-    // without this filter "deleted" items would still show up here.
     sql += " AND status != 'removed'";
   }
 
@@ -241,7 +407,53 @@ app.get('/items', isLoggedIn, (req, res) => {
       console.error('Database query error:', error.message);
       return res.status(500).send('Something went wrong. Please try again.');
     }
-    res.render('items/index', { items: results, query: req.query });
+
+    // Autocomplete: every distinct item name feeds a native <datalist> in
+    // the view, so the browser handles the suggestion dropdown itself —
+    // zero client-side JavaScript, zero extra endpoint.
+    connection.query('SELECT DISTINCT item_name FROM items', (namesErr, namesResults) => {
+      if (namesErr) {
+        console.error('Database query error:', namesErr.message);
+        return res.status(500).send('Something went wrong. Please try again.');
+      }
+      const itemNames = namesResults.map((row) => row.item_name);
+
+      function showRecentSearchesAndRender() {
+        // GROUP BY (not SELECT DISTINCT) here — MySQL won't allow ORDER BY
+        // on a column that isn't in the SELECT list when DISTINCT is used.
+        // GROUP BY + MAX() also orders by each term's *most recent* search,
+        // which is the actually-correct behavior for "recent searches".
+        const recentSql = `SELECT search_term, MAX(searched_at) AS last_searched
+          FROM search_history WHERE user_id = ?
+          GROUP BY search_term ORDER BY last_searched DESC LIMIT 5`;
+        connection.query(recentSql, [req.session.user.user_id], (recentErr, recentResults) => {
+          if (recentErr) {
+            console.error('Database query error:', recentErr.message);
+            return res.status(500).send('Something went wrong. Please try again.');
+          }
+          res.render('items/search', {
+            items: results,
+            query: req.query,
+            itemNames,
+            recentSearches: recentResults.map((row) => row.search_term),
+          });
+        });
+      }
+
+      // Only log an actual search term, not a blank visit to the page.
+      if (q) {
+        const logSql = 'INSERT INTO search_history (user_id, search_term, searched_at) VALUES (?, ?, NOW())';
+        connection.query(logSql, [req.session.user.user_id, q], (logErr) => {
+          if (logErr) {
+            console.error('Database query error:', logErr.message);
+            return res.status(500).send('Something went wrong. Please try again.');
+          }
+          showRecentSearchesAndRender();
+        });
+      } else {
+        showRecentSearchesAndRender();
+      }
+    });
   });
 });
 
@@ -263,6 +475,7 @@ app.get('/items/:id', isLoggedIn, (req, res) => {
 
 // ===================================================================
 // Soe San — Edit Item (Update)
+// + Edit History / Audit Log
 // ===================================================================
 
 // GET /items/:id/edit — show the edit form, pre-filled with current data
@@ -303,21 +516,84 @@ app.post('/items/:id/edit', isLoggedIn, (req, res) => {
     });
   }
 
-  const sql = `UPDATE items
-      SET item_name = ?, category = ?, description = ?, location_found = ?, date_found = ?
-    WHERE item_id = ?`;
-
-  connection.query(
-    sql,
-    [item_name, category, description || null, location_found, date_found, itemId],
-    (error) => {
-      if (error) {
-        console.error('Database query error:', error.message);
-        return res.status(500).send('Something went wrong. Please try again.');
-      }
-      res.redirect('/items/' + itemId);
+  // Fetch the row as it currently stands before overwriting it — this is
+  // what lets the audit log record what actually changed, not just that
+  // an edit happened.
+  const fetchOldSql = 'SELECT * FROM items WHERE item_id = ?';
+  connection.query(fetchOldSql, [itemId], (fetchOldErr, oldResults) => {
+    if (fetchOldErr) {
+      console.error('Database query error:', fetchOldErr.message);
+      return res.status(500).send('Something went wrong. Please try again.');
     }
-  );
+    if (oldResults.length === 0) {
+      return res.status(404).send('Item not found.');
+    }
+    const oldItem = oldResults[0];
+
+    const sql = `UPDATE items
+        SET item_name = ?, category = ?, description = ?, location_found = ?, date_found = ?
+      WHERE item_id = ?`;
+
+    connection.query(
+      sql,
+      [item_name, category, description || null, location_found, date_found, itemId],
+      (error) => {
+        if (error) {
+          console.error('Database query error:', error.message);
+          return res.status(500).send('Something went wrong. Please try again.');
+        }
+
+        // Build a plain-text summary of only the fields that actually
+        // changed, for the audit log.
+        const changedFields = [];
+        if (oldItem.item_name !== item_name) {
+          changedFields.push(`item_name: '${oldItem.item_name}' -> '${item_name}'`);
+        }
+        if (oldItem.category !== category) {
+          changedFields.push(`category: '${oldItem.category}' -> '${category}'`);
+        }
+        if ((oldItem.description || '') !== (description || '')) {
+          changedFields.push('description changed');
+        }
+        if (oldItem.location_found !== location_found) {
+          changedFields.push(`location_found: '${oldItem.location_found}' -> '${location_found}'`);
+        }
+        if (oldItem.date_found !== date_found) {
+          changedFields.push(`date_found: '${oldItem.date_found}' -> '${date_found}'`);
+        }
+        const changesSummary = changedFields.length > 0 ? changedFields.join('; ') : 'No fields changed';
+
+        const logSql = 'INSERT INTO item_edit_log (item_id, edited_by, changes_summary) VALUES (?, ?, ?)';
+        connection.query(logSql, [itemId, req.session.user.user_id, changesSummary], (logErr) => {
+          if (logErr) {
+            console.error('Database query error:', logErr.message);
+            // Don't fail the whole edit just because the audit log insert
+            // failed — the item itself already saved successfully.
+          }
+          res.redirect('/items/' + itemId);
+        });
+      }
+    );
+  });
+});
+
+// GET /items/:id/history — view the edit history for an item
+app.get('/items/:id/history', isLoggedIn, (req, res) => {
+  // JOIN against users so the log shows who made each edit, not just a
+  // numeric user_id.
+  const sql = `SELECT l.log_id, l.changes_summary, l.changed_at, u.username AS edited_by_username
+      FROM item_edit_log l
+      JOIN users u ON l.edited_by = u.user_id
+      WHERE l.item_id = ?
+      ORDER BY l.changed_at DESC`;
+
+  connection.query(sql, [req.params.id], (error, results) => {
+    if (error) {
+      console.error('Database query error:', error.message);
+      return res.status(500).send('Something went wrong. Please try again.');
+    }
+    res.render('items/history', { history: results, itemId: req.params.id });
+  });
 });
 
 // ===================================================================
@@ -344,7 +620,11 @@ app.post('/items/:id/delete', isLoggedIn, isAdmin, (req, res) => {
 });
 
 // ===================================================================
-// Hui Xing, Wei Qi, Jun Hao — Claim Verification Workflow (enhancement)
+// Wei Qi — Claim Verification Workflow (core feature, sole owner)
+// Covers both halves: students submitting a claim below, and the
+// staff-only review queue further down. Paired with Remove Item above —
+// both are staff/verification-flavored responsibilities, though claim
+// *submission* itself is open to any logged-in student, not staff-only.
 // ===================================================================
 
 // GET /items/:id/claim — show the claim form

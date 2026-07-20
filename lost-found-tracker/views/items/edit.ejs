@@ -10,6 +10,12 @@
          Shernice's views/items/new.ejs, pre-filled from `item`, and each
          <option> marked selected when it matches the item's current
          category so the dropdown doesn't reset on every edit. -->
+
+    <!-- Soe San — Edit History / Audit Log: link to the full change log
+         for this item, kept on my own page rather than the item detail
+         page so this feature doesn't touch anyone else's view. -->
+    <p><a href="/items/<%= item.item_id %>/history">View past edits &rarr;</a></p>
+
     <% if (error) { %>
       <p class="error"><%= error %></p>
     <% } %>

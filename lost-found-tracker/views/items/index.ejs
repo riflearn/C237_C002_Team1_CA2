@@ -1,36 +1,26 @@
 <%- include('../partials/header') %>
   <h1>Found Items</h1>
 
-  <!-- TODO (Jun Hao): filter form, submitting as GET so query params show
-       up in the URL and match what routes/items.js reads from req.query -->
-  <form class="filters" action="/items" method="GET">
-    <input type="text" name="q" placeholder="Search...">
-    <select name="category">
-      <option value="">All categories</option>
-      <option>Electronics</option>
-      <option>Clothing</option>
-      <option>Documents</option>
-      <option>Accessories</option>
-      <option>Bags</option>
-      <option>Others</option>
-    </select>
-    <select name="status">
-      <option value="">Any status</option>
-      <option value="unclaimed">Unclaimed</option>
-      <option value="pending">Pending</option>
-      <option value="claimed">Claimed</option>
-    </select>
-    <button type="submit" class="btn">Filter</button>
-  </form>
+  <!-- Hui Xing: search/filter now lives on its own page (Jun Hao's) —
+       this page is a plain browse list. -->
+  <p><a href="/items/search" class="btn">Search &amp; Filter &rarr;</a></p>
 
-  <!-- TODO (Hui Xing): loop over the `items` array passed from routes/items.js -->
-  <!-- Hui Xing: uncommented below — renders each row from the `items` array
-       passed in from routes/items.js. That query has already applied Jun
-       Hao's filters (category/location/status/q) by the time it gets here,
-       so this loop just displays whatever came back. -->
+  <!-- Hui Xing — Sorting: each link sets ?sort=/?dir= in the URL, read
+       and validated against an allowlist in app.js's GET /items. -->
+  <p style="font-size:0.9rem;">
+    Sort by:
+    <a href="/items?sort=created_at&dir=desc">Newest</a> &middot;
+    <a href="/items?sort=date_found&dir=desc">Date found</a> &middot;
+    <a href="/items?sort=item_name&dir=asc">Name (A-Z)</a> &middot;
+    <a href="/items?sort=status&dir=asc">Status</a>
+  </p>
+
   <ul class="item-list">
     <% items.forEach(item => { %>
       <li>
+        <% if (item.image) { %>
+          <img src="/images/<%= item.image %>" alt="<%= item.item_name %>" style="width:56px; height:56px; object-fit:cover; border-radius:var(--radius);">
+        <% } %>
         <div>
           <strong><%= item.item_name %></strong> — <%= item.category %>
           <div style="font-size:0.85rem; color:var(--text-muted);">
@@ -42,6 +32,21 @@
       </li>
     <% }) %>
   </ul>
+  <% if (items.length === 0) { %>
+    <p>No items to show.</p>
+  <% } %>
+
+  <!-- Hui Xing — Pagination: carries the current sort/dir forward so
+       paging doesn't reset the sort order. -->
+  <p>
+    <% if (page > 1) { %>
+      <a href="/items?page=<%= page - 1 %>&sort=<%= sort %>&dir=<%= dir %>">&larr; Prev</a>
+    <% } %>
+    Page <%= page %> of <%= totalPages %>
+    <% if (page < totalPages) { %>
+      <a href="/items?page=<%= page + 1 %>&sort=<%= sort %>&dir=<%= dir %>">Next &rarr;</a>
+    <% } %>
+  </p>
 
   <a href="/items/new" class="btn">+ Report a found item</a>
 <%- include('../partials/footer') %>

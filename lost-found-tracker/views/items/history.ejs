@@ -1,0 +1,27 @@
+<%- include('../partials/header') %>
+  <!-- Soe San — Edit History / Audit Log: read-only trail of who changed
+       what and when for this item. Own page, own route, only touches
+       edit.ejs (a link), never Hui Xing's show.ejs. -->
+  <div class="card">
+    <h1>Edit History</h1>
+    <p><a href="/items/<%= itemId %>">&larr; Back to item</a></p>
+
+    <% if (history.length === 0) { %>
+      <p>No edits have been made to this item yet.</p>
+    <% } else { %>
+      <ul class="item-list">
+        <% history.forEach(entry => { %>
+          <li>
+            <div>
+              <strong><%= entry.edited_by_username %></strong>
+              <div style="font-size:0.85rem; color:var(--text-muted);">
+                <%= entry.changed_at %>
+              </div>
+              <div style="margin-top:0.35rem;"><%= entry.changes_summary %></div>
+            </div>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
+<%- include('../partials/footer') %>

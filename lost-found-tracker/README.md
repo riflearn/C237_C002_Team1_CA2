@@ -35,16 +35,24 @@ route, in one file (matching the style from `C237L17`'s SupermarketApp:
 project is a view: plain `.ejs` templates under `views/`, plus `public/css`.
 
 Each feature is a section in `app.js`, marked with a banner comment naming its  
-owner:
+owner. Redistributed per lecturer feedback — 2 features per person, Claim  
+Verification is now a core feature (not an enhancement), and Browse/Search  
+were split into separate routes (previously shared one function):
 
-| Section banner in app.js | Owner | Feature |
+| Person | Core feature | Second feature |
 | --- | --- | --- |
-| Firdaus — Auth & Access Control | Firdaus | Register / login / logout (done — reference pattern) |
-| Shernice — Report a Found Item (Create) | Shernice | `GET`/`POST /items/new` |
-| Hui Xing — Browse & View Items (Read) / Jun Hao — Search & Filter | Hui Xing + Jun Hao | `GET /items`, `GET /items/:id` |
-| Soe San — Edit Item (Update) | Soe San | `GET`/`POST /items/:id/edit` |
-| Wei Qi — Remove Item (Delete) | Wei Qi | `POST /items/:id/delete` |
-| Hui Xing, Wei Qi, Jun Hao — Claim Verification Workflow | Hui Xing, Wei Qi, Jun Hao | claim + review routes (enhancement) |
+| Firdaus | Auth & Access Control — `GET`/`POST /register`, `/login`, `POST /logout` | My Profile / Account Settings — `GET`/`POST /profile` |
+| Shernice | Report a Found Item (Create) — `GET`/`POST /items/new` | Image Upload (create-only, `multer`) |
+| Hui Xing | Browse & View Items (Read) — `GET /items`, `GET /items/:id` | Pagination & Sorting on `GET /items` |
+| Jun Hao | Search & Filter — `GET /items/search` (own route, split from Hui Xing's) | Autocomplete (`<datalist>`) + Recent Searches |
+| Soe San | Edit Item (Update) — `GET`/`POST /items/:id/edit` | Edit History / Audit Log — `GET /items/:id/history` |
+| Wei Qi | Remove Item (Delete) — `POST /items/:id/delete` | Claim Verification Workflow (core, sole owner) — claim submit/withdraw + staff review queue |
+
+Deliberately minimal cross-touch between people's code — each person's routes,  
+views, and SQL queries are self-contained in their own files. The only shared  
+touchpoints are `views/partials/header.ejs` (nav links) and displaying  
+Shernice's uploaded photo on Hui Xing's item pages — both are simple, one-line  
+additions, not shared logic.
 
 All of the above is implemented (not stubs) — but per the individual  
 assessment, you're still expected to be able to walk through your section's  

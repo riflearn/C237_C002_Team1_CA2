@@ -31,12 +31,13 @@ CREATE TABLE items (
   date_found      DATE NOT NULL,
   status          ENUM('unclaimed', 'pending', 'claimed', 'removed') NOT NULL DEFAULT 'unclaimed',
   reported_by     INT NOT NULL,
+  image           VARCHAR(255) NULL,          -- uploaded filename (Shernice's Image Upload feature), NULL if none
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (reported_by) REFERENCES users(user_id)
 );
 
 -- ---------------------------------------------------
--- claims  (enhancement — Hui Xing, Wei Qi, Jun Hao)
+-- claims  (core feature — Wei Qi, Claim Verification Workflow)
 -- ---------------------------------------------------
 CREATE TABLE claims (
   claim_id            INT AUTO_INCREMENT PRIMARY KEY,
@@ -50,6 +51,33 @@ CREATE TABLE claims (
   FOREIGN KEY (item_id) REFERENCES items(item_id),
   FOREIGN KEY (claimed_by) REFERENCES users(user_id),
   FOREIGN KEY (reviewed_by) REFERENCES users(user_id)
+);
+
+-- ---------------------------------------------------
+-- item_edit_log  (Soe San — Edit History / Audit Log)
+-- One row per successful item edit; changes_summary is a plain-text
+-- summary of which fields changed (e.g. "item_name: 'A' -> 'B'").
+-- ---------------------------------------------------
+CREATE TABLE item_edit_log (
+  log_id            INT AUTO_INCREMENT PRIMARY KEY,
+  item_id           INT NOT NULL,
+  edited_by         INT NOT NULL,
+  changes_summary   TEXT NOT NULL,
+  changed_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (item_id) REFERENCES items(item_id),
+  FOREIGN KEY (edited_by) REFERENCES users(user_id)
+);
+
+-- ---------------------------------------------------
+-- search_history  (Jun Hao — Recent Searches, part of her
+-- Autocomplete + Recent Searches feature)
+-- ---------------------------------------------------
+CREATE TABLE search_history (
+  search_id     INT AUTO_INCREMENT PRIMARY KEY,
+  user_id       INT NOT NULL,
+  search_term   VARCHAR(255) NOT NULL,
+  searched_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
 -- =====================================================
