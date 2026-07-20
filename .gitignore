@@ -4,10 +4,12 @@ node_modules/
 # Local secrets — every teammate has their own .env, never committed
 .env
 
-# Assignment paperwork (spec, development journal, technical plan) —
-# course/personal documents, not code, submitted separately via LMS.
+# Assignment paperwork (spec, development journal, technical plan,
+# presentation slides) — course/personal documents, not code, submitted
+# separately via LMS / presented directly, not shipped in this repo.
 *.docx
 *.pdf
+*.pptx
 
 # Snapshot/backup zips (e.g. lost-found-tracker.zip) — these can contain a
 # full copy of node_modules and the real .env with live credentials in it.
@@ -15,3 +17,7 @@ node_modules/
 
 # Personal presentation/study prep — not part of the app, not shared via repo.
 presentation-prep/
+
+# Claude session-continuity notes — for re-orienting after context
+# compaction, not part of the app, not shared via repo.
+claude-notes/
