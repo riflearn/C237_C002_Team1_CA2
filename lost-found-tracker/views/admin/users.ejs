@@ -80,31 +80,30 @@
           <td style="padding:0.75rem 1rem;">
             <% if (u.user_id === user.user_id) { %>
               <span style="font-size:0.82rem; color:var(--text-muted);">(you)</span>
-            <% } else { %>
-              <form action="/admin/users/<%= u.user_id %>/role" method="POST" style="display:inline; flex-direction:unset;">
-                <% if (u.role !== 'student') { %>
-                  <input type="hidden" name="role" value="student">
-                  <button type="submit" class="btn btn-sm">Make Student</button>
-                <% } else { %>
-                  <input type="hidden" name="role" value="staff">
-                  <button type="submit" class="btn btn-sm">Make Staff</button>
-                <% } %>
+            <% } else if (u.status === 'disabled') { %>
+              <!-- Disabled account: one action only. Reactivate first, then
+                   their role can be managed again — keeps the row uncluttered. -->
+              <form action="/admin/users/<%= u.user_id %>/reactivate" method="POST" style="margin:0; max-width:none;">
+                <button type="submit" class="btn btn-sm">Reactivate</button>
               </form>
-              <% if (u.role === 'staff') { %>
-                <form action="/admin/users/<%= u.user_id %>/role" method="POST" style="display:inline; flex-direction:unset;">
-                  <input type="hidden" name="role" value="admin">
-                  <button type="submit" class="btn btn-sm">Make Admin</button>
+            <% } else { %>
+              <div class="user-actions">
+                <!-- One dropdown replaces the old Make Student / Make Staff /
+                     Make Admin buttons — same role <select> as the Create
+                     New Account form above. Current role is pre-selected. -->
+                <form action="/admin/users/<%= u.user_id %>/role" method="POST">
+                  <select name="role" class="role-select">
+                    <option value="student" <%= u.role === 'student' ? 'selected' : '' %>>Student</option>
+                    <option value="staff" <%= u.role === 'staff' ? 'selected' : '' %>>Staff</option>
+                    <option value="admin" <%= u.role === 'admin' ? 'selected' : '' %>>Admin</option>
+                  </select>
+                  <button type="submit" class="btn btn-sm">Update</button>
                 </form>
-              <% } %>
-              <% if (u.status === 'active') { %>
-                <form action="/admin/users/<%= u.user_id %>/delete" method="POST" style="display:inline; flex-direction:unset;">
-                  <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                <span class="action-divider"></span>
+                <form action="/admin/users/<%= u.user_id %>/delete" method="POST">
+                  <button type="submit" class="btn-link-danger">Delete</button>
                 </form>
-              <% } else { %>
-                <form action="/admin/users/<%= u.user_id %>/reactivate" method="POST" style="display:inline; flex-direction:unset;">
-                  <button type="submit" class="btn btn-sm">Reactivate</button>
-                </form>
-              <% } %>
+              </div>
             <% } %>
           </td>
         </tr>
