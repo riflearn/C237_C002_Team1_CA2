@@ -127,6 +127,30 @@ function isStaffOrAdmin(req, res, next) {
 }
 
 // ===================================================================
+// Firdaus — Password strength check
+// One shared rule for every place a password is set: registration, the
+// admin "create account" form, and the profile password change. A password
+// must be at least 6 characters AND contain at least one letter and one
+// number — this blocks the common weak cases: all-numbers ("12345678"),
+// all-letters ("password"), and too-short ("abc1"). Returns an error message
+// string if the password is no good, or null if it passes.
+// ===================================================================
+function checkPassword(password) {
+  if (!password || password.length < 6) {
+    return 'Password must be at least 6 characters long.';
+  }
+  if (!/[A-Za-z]/.test(password)) {
+    // No letters at all — e.g. a password that's just numbers.
+    return 'Password must include at least one letter.';
+  }
+  if (!/[0-9]/.test(password)) {
+    // No digits at all — e.g. a password that's just letters.
+    return 'Password must include at least one number.';
+  }
+  return null; // password is acceptable
+}
+
+// ===================================================================
 // Firdaus — Auth & Access Control
 // This section is complete and working, as a reference for the pattern
 // (route -> validate -> query -> render/redirect) the rest of the team
@@ -144,6 +168,12 @@ app.post('/register', (req, res) => {
 
   if (!username || !password || !email) {
     return res.render('register', { error: 'All fields are required.' });
+  }
+
+  // Password strength check (see checkPassword above).
+  const passwordError = checkPassword(password);
+  if (passwordError) {
+    return res.render('register', { error: passwordError });
   }
 
   const checkSql = 'SELECT user_id FROM users WHERE username = ?';
@@ -254,6 +284,17 @@ app.post('/profile', isLoggedIn, (req, res) => {
       });
     }
 
+    // New password must pass the same strength rule as registration
+    // (see checkPassword above).
+    const passwordError = checkPassword(new_password);
+    if (passwordError) {
+      return res.render('profile', {
+        profileUser: { ...req.session.user, email },
+        error: passwordError,
+        success: null,
+      });
+    }
+
     const verifySql = 'SELECT user_id FROM users WHERE user_id = ? AND password = SHA1(?)';
     connection.query(verifySql, [userId, current_password], (verifyErr, verifyResults) => {
       if (verifyErr) {
@@ -323,13 +364,29 @@ app.get('/admin/users', isLoggedIn, isAdmin, (req, res) => {
 app.post('/admin/users/create', isLoggedIn, isAdmin, (req, res) => {
   const { username, email, password, role } = req.body;
 
+  // The user list has to be re-fetched to re-render this page on any error.
+  // Include `status` — views/admin/users.ejs shows a status badge per row.
+  const listSql = 'SELECT user_id, username, email, role, status FROM users ORDER BY role ASC, username ASC';
+
   if (!username || !email || !password || !role) {
-    const sql = 'SELECT user_id, username, email, role FROM users ORDER BY role ASC, username ASC';
-    return connection.query(sql, (err, results) => {
+    return connection.query(listSql, (err, results) => {
       res.render('admin/users', {
         users: results || [],
         success: null,
         error: 'All fields are required.',
+      });
+    });
+  }
+
+  // Password strength check (see checkPassword above) — same rule the
+  // register form uses, so admin-created accounts aren't held to a lower bar.
+  const passwordError = checkPassword(password);
+  if (passwordError) {
+    return connection.query(listSql, (err, results) => {
+      res.render('admin/users', {
+        users: results || [],
+        success: null,
+        error: passwordError,
       });
     });
   }
@@ -345,8 +402,7 @@ app.post('/admin/users/create', isLoggedIn, isAdmin, (req, res) => {
       return res.status(500).send('Something went wrong. Please try again.');
     }
     if (checkResults.length > 0) {
-      const sql = 'SELECT user_id, username, email, role FROM users ORDER BY role ASC, username ASC';
-      return connection.query(sql, (err, results) => {
+      return connection.query(listSql, (err, results) => {
         res.render('admin/users', {
           users: results || [],
           success: null,
