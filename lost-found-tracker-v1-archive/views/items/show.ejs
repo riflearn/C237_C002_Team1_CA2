@@ -16,21 +16,15 @@
     <p><strong>Location:</strong> <%= item.location_found %></p>
     <p><strong>Date found:</strong> <%= item.date_found %></p>
 
-    <% if (user && (user.role === 'staff' || user.role === 'admin')) { %>
-      <a href="/items/<%= item.item_id %>/edit" class="btn">Edit</a>
-    <% } %>
     <% if (user && user.role === 'admin') { %>
+      <a href="/items/<%= item.item_id %>/edit" class="btn">Edit</a>
       <form action="/items/<%= item.item_id %>/delete" method="POST" style="display:inline;">
         <button type="submit" class="btn btn-danger">Delete</button>
       </form>
     <% } %>
 
     <% if (user && user.role === 'student' && item.status === 'unclaimed') { %>
-      <% if (alreadyClaimed) { %>
-        <p style="color:var(--success); font-weight:600;">✓ Your claim has been submitted. Staff will review it shortly.</p>
-      <% } else { %>
-        <a href="/items/<%= item.item_id %>/claim" class="btn">Claim this item</a>
-      <% } %>
+      <a href="/items/<%= item.item_id %>/claim" class="btn">Claim this item</a>
     <% } %>
   </div>
 <%- include('../partials/footer') %>

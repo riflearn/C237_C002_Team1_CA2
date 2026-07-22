@@ -1,33 +1,53 @@
 <%- include('../partials/header') %>
-  <!-- Hui Xing, Wei Qi, Jun Hao — Claim Verification (enhancement): staff-only
-       list of pending claims, from routes/claims.js GET /claims. Each claim
-       has an Approve/Reject button posting to POST /claims/:id/review. -->
-  <h1>Pending Claims</h1>
 
-  <% if (claims.length === 0) { %>
-    <p>No pending claims right now.</p>
+<div class="browse-hero">
+  <div class="browse-hero-inner">
+    <h1 class="browse-title">Claim Review</h1>
+  </div>
+</div>
+
+<div class="container">
+
+  <% if (categories.length === 0) { %>
+    <div class="empty-state">
+      <p>No pending claims right now.</p>
+    </div>
+  <% } else { %>
+
+    <!-- Category tabs — only shows categories that have pending claims -->
+    <div class="status-tabs">
+      <a href="/claims"
+         class="tab-link <%= !activeCategory ? 'tab-active' : '' %>">All</a>
+      <% categories.forEach(cat => { %>
+        <a href="/claims?category=<%= encodeURIComponent(cat) %>"
+           class="tab-link <%= activeCategory === cat ? 'tab-active' : '' %>">
+          <%= cat %>
+        </a>
+      <% }) %>
+    </div>
+
+    <!-- Items with pending claims — click one to see all its claims -->
+    <ul class="item-list">
+      <% items.forEach(item => { %>
+        <li class="item-card">
+          <div class="item-info">
+            <div class="item-name"><%= item.item_name %></div>
+            <div class="item-meta"><%= item.category %> &middot; <%= item.location_found %></div>
+          </div>
+          <span class="claim-count-badge"><%= item.claim_count %> claim<%= item.claim_count !== 1 ? 's' : '' %></span>
+          <a href="/claims/item/<%= item.item_id %>" class="btn btn-sm">Review &rarr;</a>
+        </li>
+      <% }) %>
+    </ul>
+
+    <% if (items.length === 0) { %>
+      <div class="empty-state">
+        <p>No pending claims in this category.</p>
+      </div>
+    <% } %>
+
   <% } %>
 
-  <ul class="item-list">
-    <% claims.forEach(claim => { %>
-      <li>
-        <div>
-          <strong><%= claim.item_name %></strong> claimed by <%= claim.claimant_username %>
-          <div style="font-size:0.85rem; color:var(--text-muted);">
-            <%= claim.proof_description %>
-          </div>
-        </div>
-        <div>
-          <form action="/claims/<%= claim.claim_id %>/review" method="POST" style="display:inline;">
-            <input type="hidden" name="decision" value="approved">
-            <button type="submit" class="btn">Approve</button>
-          </form>
-          <form action="/claims/<%= claim.claim_id %>/review" method="POST" style="display:inline;">
-            <input type="hidden" name="decision" value="rejected">
-            <button type="submit" class="btn btn-danger">Reject</button>
-          </form>
-        </div>
-      </li>
-    <% }) %>
-  </ul>
+</div>
+
 <%- include('../partials/footer') %>

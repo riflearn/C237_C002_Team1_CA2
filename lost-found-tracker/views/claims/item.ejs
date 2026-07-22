@@ -1,0 +1,66 @@
+<%- include('../partials/header') %>
+
+<div class="browse-hero">
+  <div class="browse-hero-inner">
+    <h1 class="browse-title">Claims for: <%= item.item_name %></h1>
+    <a href="/claims?category=<%= encodeURIComponent(item.category) %>" class="btn btn-outline">&larr; Back to <%= item.category %></a>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <div style="display:flex; gap:1rem; align-items:flex-start; flex-wrap:wrap;">
+      <% if (item.image) { %>
+        <img src="/images/<%= item.image %>" alt="<%= item.item_name %>"
+             style="width:80px; height:80px; object-fit:cover; border-radius:var(--radius); flex-shrink:0;">
+      <% } %>
+      <div>
+        <div style="font-weight:700; font-size:1.1rem;"><%= item.item_name %></div>
+        <div style="color:var(--text-muted); font-size:0.88rem; margin-top:0.25rem;">
+          <%= item.category %> &middot; <%= item.location_found %> &middot; Found <%= item.date_found %>
+        </div>
+        <% if (item.description) { %>
+          <div style="margin-top:0.5rem; font-size:0.9rem;"><%= item.description %></div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <% if (claims.length === 0) { %>
+    <div class="empty-state">
+      <p>No pending claims for this item.</p>
+    </div>
+  <% } else { %>
+    <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1rem;">
+      <%= claims.length %> pending claim<%= claims.length !== 1 ? 's' : '' %> —
+      approve the real owner's claim and reject the rest.
+      A convincing claim will mention something specific only the owner would know.
+    </p>
+
+    <ul class="item-list">
+      <% claims.forEach(claim => { %>
+        <li class="claim-review-card">
+          <div class="claim-review-meta">
+            <span class="claim-review-user"><%= claim.claimant_username %></span>
+            <span class="claim-review-date"><%= new Date(claim.created_at).toLocaleDateString('en-GB') %></span>
+          </div>
+          <div class="claim-review-proof">"<%= claim.proof_description %>"</div>
+          <div class="claim-review-actions">
+            <form action="/claims/<%= claim.claim_id %>/review" method="POST" style="display:inline;">
+              <input type="hidden" name="decision" value="approved">
+              <button type="submit" class="btn btn-sm">Approve</button>
+            </form>
+            <form action="/claims/<%= claim.claim_id %>/review" method="POST" style="display:inline;">
+              <input type="hidden" name="decision" value="rejected">
+              <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+            </form>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+
+</div>
+
+<%- include('../partials/footer') %>

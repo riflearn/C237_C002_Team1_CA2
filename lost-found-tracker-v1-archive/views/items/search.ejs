@@ -29,14 +29,6 @@
       <option value="pending" <%= query.status === 'pending' ? 'selected' : '' %>>Pending</option>
       <option value="claimed" <%= query.status === 'claimed' ? 'selected' : '' %>>Claimed</option>
     </select>
-
-    <!-- Date range filter on date_found — the main way to reach items
-         older than 30 days that are hidden from the default Browse page -->
-    <label style="font-size:0.85rem; color:var(--text-muted); align-self:center; margin:0;">From</label>
-    <input type="date" name="date_from" value="<%= query.date_from || '' %>" style="width:auto;">
-    <label style="font-size:0.85rem; color:var(--text-muted); align-self:center; margin:0;">To</label>
-    <input type="date" name="date_to" value="<%= query.date_to || '' %>" style="width:auto;">
-
     <button type="submit" class="btn">Search</button>
   </form>
 

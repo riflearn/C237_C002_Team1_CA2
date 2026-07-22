@@ -6,18 +6,15 @@
   <title>Lost & Found Tracker</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="<%= user && user.role === 'admin' ? 'admin-theme' : user && user.role === 'staff' ? 'staff-theme' : '' %>">
+<body>
   <nav class="navbar">
     <div>
       <span class="brand">Lost &amp; Found Tracker</span>
       <% if (user) { %>
         <a href="/items">Items</a>
         <a href="/items/search">Search</a>
-        <% if (user.role === 'staff' || user.role === 'admin') { %>
-          <a href="/claims">Claims</a>
-        <% } %>
         <% if (user.role === 'admin') { %>
-          <a href="/admin/users">Users</a>
+          <a href="/claims">Claims</a>
         <% } %>
       <% } %>
     </div>

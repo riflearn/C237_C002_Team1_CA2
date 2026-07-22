@@ -1,0 +1,42 @@
+<%- include('../partials/header') %>
+  <div class="card">
+    <h1>Report a found item</h1>
+    <% if (error) { %>
+      <p class="error"><%= error %></p>
+    <% } %>
+
+    <!-- Shernice: enctype="multipart/form-data" is required for the file
+         input below to actually upload a file — a normal form encoding
+         only sends text fields, multer needs the multipart format to
+         parse req.file. -->
+    <form action="/items/new" method="POST" enctype="multipart/form-data">
+      <label for="item_name">Item name</label>
+      <input type="text" id="item_name" name="item_name" required>
+
+      <label for="category">Category</label>
+      <select id="category" name="category" required>
+        <option value="">Select a category</option>
+        <option>Electronics</option>
+        <option>Clothing</option>
+        <option>Documents</option>
+        <option>Accessories</option>
+        <option>Bags</option>
+        <option>Others</option>
+      </select>
+
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="3"></textarea>
+
+      <label for="location_found">Location found</label>
+      <input type="text" id="location_found" name="location_found" required>
+
+      <label for="date_found">Date found</label>
+      <input type="date" id="date_found" name="date_found" required>
+
+      <label for="image">Photo (optional)</label>
+      <input type="file" id="image" name="image" accept="image/*">
+
+      <button type="submit" class="btn">Submit</button>
+    </form>
+  </div>
+<%- include('../partials/footer') %>

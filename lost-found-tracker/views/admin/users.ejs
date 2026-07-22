@@ -1,0 +1,97 @@
+<%- include('../partials/header') %>
+
+<div class="browse-hero">
+  <div class="browse-hero-inner">
+    <h1 class="browse-title">User Management</h1>
+  </div>
+</div>
+
+<div class="container">
+
+  <% if (success === 'updated') { %>
+    <p class="success">User role updated successfully.</p>
+  <% } else if (success === 'created') { %>
+    <p class="success">New account created successfully.</p>
+  <% } else if (success === 'cannot-self') { %>
+    <p class="error">You cannot change your own role.</p>
+  <% } %>
+  <% if (error) { %>
+    <p class="error"><%= error %></p>
+  <% } %>
+
+  <!-- Create new account -->
+  <div class="card" style="margin-bottom:2rem;">
+    <h2 style="margin-top:0; font-size:1.1rem;">Create New Account</h2>
+    <form action="/admin/users/create" method="POST" style="flex-direction:row; flex-wrap:wrap; gap:0.75rem; max-width:none; align-items:flex-end;">
+      <div style="display:flex; flex-direction:column; gap:0.3rem; flex:1; min-width:140px;">
+        <label>Username</label>
+        <input type="text" name="username" required>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:0.3rem; flex:1; min-width:180px;">
+        <label>Email</label>
+        <input type="email" name="email" required>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:0.3rem; flex:1; min-width:140px;">
+        <label>Password</label>
+        <input type="password" name="password" required>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:0.3rem; min-width:120px;">
+        <label>Role</label>
+        <select name="role">
+          <option value="student">Student</option>
+          <option value="staff">Staff</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <button type="submit" class="btn" style="height:fit-content;">Create</button>
+    </form>
+  </div>
+
+  <!-- User list -->
+  <h2 style="font-size:1.1rem; margin-bottom:1rem;">All Users (<%= users.length %>)</h2>
+  <table style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr style="border-bottom:2px solid var(--border); text-align:left;">
+        <th style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--text-muted); font-weight:600;">Username</th>
+        <th style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--text-muted); font-weight:600;">Email</th>
+        <th style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--text-muted); font-weight:600;">Role</th>
+        <th style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--text-muted); font-weight:600;">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% users.forEach(u => { %>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:0.75rem 1rem;"><%= u.username %></td>
+          <td style="padding:0.75rem 1rem; color:var(--text-muted); font-size:0.88rem;"><%= u.email %></td>
+          <td style="padding:0.75rem 1rem;">
+            <span class="status-badge role-<%= u.role %>"><%= u.role %></span>
+          </td>
+          <td style="padding:0.75rem 1rem;">
+            <% if (u.user_id === user.user_id) { %>
+              <span style="font-size:0.82rem; color:var(--text-muted);">(you)</span>
+            <% } else { %>
+              <form action="/admin/users/<%= u.user_id %>/role" method="POST" style="display:inline; flex-direction:unset;">
+                <% if (u.role !== 'student') { %>
+                  <input type="hidden" name="role" value="student">
+                  <button type="submit" class="btn btn-sm">Make Student</button>
+                <% } else { %>
+                  <input type="hidden" name="role" value="staff">
+                  <button type="submit" class="btn btn-sm">Make Staff</button>
+                <% } %>
+              </form>
+              <% if (u.role === 'staff') { %>
+                <form action="/admin/users/<%= u.user_id %>/role" method="POST" style="display:inline; flex-direction:unset;">
+                  <input type="hidden" name="role" value="admin">
+                  <button type="submit" class="btn btn-sm">Make Admin</button>
+                </form>
+              <% } %>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+</div>
+
+<%- include('../partials/footer') %>

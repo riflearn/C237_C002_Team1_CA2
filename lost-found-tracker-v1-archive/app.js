@@ -91,27 +91,11 @@ function isLoggedIn(req, res, next) {
   return res.redirect('/login');
 }
 
-function isStaff(req, res, next) {
-  if (req.session && req.session.user && req.session.user.role === 'staff') {
-    return next();
-  }
-  return res.status(403).render('403', {});
-}
-
 function isAdmin(req, res, next) {
   if (req.session && req.session.user && req.session.user.role === 'admin') {
     return next();
   }
-  // Render a proper styled 403 page instead of raw text, so students
-  // who accidentally land on an admin route see something reasonable.
-  return res.status(403).render('403', {});
-}
-
-function isStaffOrAdmin(req, res, next) {
-  if (req.session && req.session.user && (req.session.user.role === 'staff' || req.session.user.role === 'admin')) {
-    return next();
-  }
-  return res.status(403).render('403', {});
+  return res.status(403).send('Forbidden — admin access only');
 }
 
 // ===================================================================
@@ -283,106 +267,20 @@ app.post('/profile', isLoggedIn, (req, res) => {
 });
 
 // ===================================================================
-// Firdaus — User Management (admin only)
-// Lets an admin see all registered users and promote/demote their role.
-// An admin cannot demote themselves — prevents accidental lockout.
-// ===================================================================
-
-// GET /admin/users — list all users with their roles
-app.get('/admin/users', isLoggedIn, isAdmin, (req, res) => {
-  const sql = 'SELECT user_id, username, email, role FROM users ORDER BY role ASC, username ASC';
-  connection.query(sql, (error, results) => {
-    if (error) {
-      console.error('Database query error:', error.message);
-      return res.status(500).send('Something went wrong. Please try again.');
-    }
-    res.render('admin/users', { users: results, success: req.query.success || null, error: null });
-  });
-});
-
-// POST /admin/users/create — admin creates a new account with any role
-app.post('/admin/users/create', isLoggedIn, isAdmin, (req, res) => {
-  const { username, email, password, role } = req.body;
-
-  if (!username || !email || !password || !role) {
-    const sql = 'SELECT user_id, username, email, role FROM users ORDER BY role ASC, username ASC';
-    return connection.query(sql, (err, results) => {
-      res.render('admin/users', {
-        users: results || [],
-        success: null,
-        error: 'All fields are required.',
-      });
-    });
-  }
-
-  if (role !== 'admin' && role !== 'student' && role !== 'staff') {
-    return res.status(400).send('Invalid role.');
-  }
-
-  const checkSql = 'SELECT user_id FROM users WHERE username = ?';
-  connection.query(checkSql, [username], (checkErr, checkResults) => {
-    if (checkErr) {
-      console.error('Database query error:', checkErr.message);
-      return res.status(500).send('Something went wrong. Please try again.');
-    }
-    if (checkResults.length > 0) {
-      const sql = 'SELECT user_id, username, email, role FROM users ORDER BY role ASC, username ASC';
-      return connection.query(sql, (err, results) => {
-        res.render('admin/users', {
-          users: results || [],
-          success: null,
-          error: 'That username is already taken.',
-        });
-      });
-    }
-
-    const insertSql = 'INSERT INTO users (username, password, email, role) VALUES (?, SHA1(?), ?, ?)';
-    connection.query(insertSql, [username, password, email, role], (insertErr) => {
-      if (insertErr) {
-        console.error('Database query error:', insertErr.message);
-        return res.status(500).send('Something went wrong. Please try again.');
-      }
-      res.redirect('/admin/users?success=created');
-    });
-  });
-});
-
-// POST /admin/users/:id/role — change a user's role
-app.post('/admin/users/:id/role', isLoggedIn, isAdmin, (req, res) => {
-  const targetId = parseInt(req.params.id);
-  const { role } = req.body;
-
-  // Guard: admin cannot change their own role — prevents self-lockout.
-  if (targetId === req.session.user.user_id) {
-    return res.redirect('/admin/users?success=cannot-self');
-  }
-
-  if (role !== 'admin' && role !== 'student' && role !== 'staff') {
-    return res.status(400).send('Invalid role.');
-  }
-
-  const sql = 'UPDATE users SET role = ? WHERE user_id = ?';
-  connection.query(sql, [role, targetId], (error) => {
-    if (error) {
-      console.error('Database query error:', error.message);
-      return res.status(500).send('Something went wrong. Please try again.');
-    }
-    res.redirect('/admin/users?success=updated');
-  });
-});
-
-// ===================================================================
 // Shernice — Report a Found Item (Create)
 // + Image Upload (attach a photo when reporting an item)
 // ===================================================================
 
 // GET /items/new — show the "report a found item" form
-app.get('/items/new', isLoggedIn, isStaffOrAdmin, (req, res) => {
+app.get('/items/new', isLoggedIn, (req, res) => {
   res.render('items/new', { error: null });
 });
 
 // POST /items/new — insert the new item into the database
-app.post('/items/new', isLoggedIn, isStaffOrAdmin, imageUpload.single('image'), (req, res) => {
+// imageUpload.single('image') runs first: parses the multipart form,
+// saves the uploaded file (if any) to public/images, and makes it
+// available as req.file — same middleware pattern as L17's SupermarketApp.
+app.post('/items/new', isLoggedIn, imageUpload.single('image'), (req, res) => {
   const { item_name, category, description, location_found, date_found } = req.body;
 
   // description is optional (its textarea has no `required`); everything
@@ -419,35 +317,22 @@ app.post('/items/new', isLoggedIn, isStaffOrAdmin, imageUpload.single('image'), 
 // + Pagination & Sorting
 // ===================================================================
 
-// GET /items — list found items, paginated and sortable, filtered by status tab
-// Default view shows only the last 30 days. Older items are accessible via
-// /items/search (Jun Hao's filter page) — keeps the browse list manageable.
+// GET /items — list found items, paginated and sortable
 app.get('/items', isLoggedIn, (req, res) => {
   // ORDER BY's column name can't be passed as a `?` placeholder — those
   // only work for values, not identifiers — so req.query.sort is checked
   // against a fixed allowlist before ever touching the SQL string. Never
   // interpolate unvalidated user input into a query, even just a column name.
-  // 'status' removed from the allowlist — sorting by status within a
-  // status-filtered page is meaningless now that items are already split
-  // into separate tabs by status.
-  const allowedSortColumns = ['created_at', 'date_found', 'item_name'];
+  const allowedSortColumns = ['created_at', 'date_found', 'item_name', 'status'];
   const sortColumn = allowedSortColumns.includes(req.query.sort) ? req.query.sort : 'created_at';
   const sortDirection = req.query.dir === 'asc' ? 'ASC' : 'DESC';
-
-  // Status tab: 'unclaimed' | 'pending' | 'claimed' — defaults to 'unclaimed'.
-  // Validated against an allowlist for the same reason as sortColumn.
-  const allowedStatuses = ['unclaimed', 'pending', 'claimed'];
-  const activeStatus = allowedStatuses.includes(req.query.status) ? req.query.status : 'unclaimed';
 
   const perPage = 5;
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const offset = (page - 1) * perPage;
 
-  // COUNT is scoped to the active status tab AND the last 30 days so
-  // pagination is independent per tab and old items don't clutter the list.
-  // Users can find older items via Search & Filter (Jun Hao's /items/search).
-  const countSql = 'SELECT COUNT(*) AS total FROM items WHERE status = ? AND date_found >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
-  connection.query(countSql, [activeStatus], (countErr, countResults) => {
+  const countSql = "SELECT COUNT(*) AS total FROM items WHERE status != 'removed'";
+  connection.query(countSql, (countErr, countResults) => {
     if (countErr) {
       console.error('Database query error:', countErr.message);
       return res.status(500).send('Something went wrong. Please try again.');
@@ -456,10 +341,13 @@ app.get('/items', isLoggedIn, (req, res) => {
     const totalItems = countResults[0].total;
     const totalPages = Math.max(Math.ceil(totalItems / perPage), 1);
 
-    const sql = `SELECT * FROM items WHERE status = ? AND date_found >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    // Hide soft-deleted items — Wei Qi's delete route flips status to
+    // 'removed' instead of deleting the row outright, so without this
+    // filter "deleted" items would still show up here.
+    const sql = `SELECT * FROM items WHERE status != 'removed'
       ORDER BY ${sortColumn} ${sortDirection} LIMIT ? OFFSET ?`;
 
-    connection.query(sql, [activeStatus, perPage, offset], (error, results) => {
+    connection.query(sql, [perPage, offset], (error, results) => {
       if (error) {
         console.error('Database query error:', error.message);
         return res.status(500).send('Something went wrong. Please try again.');
@@ -470,7 +358,6 @@ app.get('/items', isLoggedIn, (req, res) => {
         totalPages,
         sort: sortColumn,
         dir: sortDirection.toLowerCase(),
-        activeStatus,
       });
     });
   });
@@ -487,7 +374,7 @@ app.get('/items', isLoggedIn, (req, res) => {
 
 // GET /items/search — search/filter items, with autocomplete + recent searches
 app.get('/items/search', isLoggedIn, (req, res) => {
-  const { category, location, status, q, date_from, date_to } = req.query;
+  const { category, location, status, q } = req.query;
   let sql = 'SELECT * FROM items WHERE 1=1';
   const params = [];
 
@@ -511,22 +398,6 @@ app.get('/items/search', isLoggedIn, (req, res) => {
   if (q) {
     sql += ' AND (item_name LIKE ? OR description LIKE ?)';
     params.push(`%${q}%`, `%${q}%`);
-  }
-
-  // Date range filter on date_found — lets users reach items older than
-  // 30 days that are hidden from the default Browse page.
-  // Both fields are optional: supply just date_from for "from X onwards",
-  // just date_to for "up to X", or both for a specific window.
-  // Values come in as 'YYYY-MM-DD' strings from <input type="date">;
-  // passed as ? params so they're never interpolated into the SQL string.
-  if (date_from) {
-    sql += ' AND date_found >= ?';
-    params.push(date_from);
-  }
-
-  if (date_to) {
-    sql += ' AND date_found <= ?';
-    params.push(date_to);
   }
 
   sql += ' ORDER BY created_at DESC';
@@ -598,21 +469,7 @@ app.get('/items/:id', isLoggedIn, (req, res) => {
     if (results.length === 0) {
       return res.status(404).send('Item not found.');
     }
-
-    // Check if the logged-in user already has a pending claim for this item
-    // so the view can hide the "Claim this item" button and show a message
-    // instead — prevents the confusing double-submit flow.
-    const claimCheckSql = "SELECT claim_id FROM claims WHERE item_id = ? AND claimed_by = ? AND claim_status = 'pending'";
-    connection.query(claimCheckSql, [req.params.id, req.session.user.user_id], (claimErr, claimResults) => {
-      if (claimErr) {
-        console.error('Database query error:', claimErr.message);
-        return res.status(500).send('Something went wrong. Please try again.');
-      }
-      res.render('items/show', {
-        item: results[0],
-        alreadyClaimed: claimResults.length > 0,
-      });
-    });
+    res.render('items/show', { item: results[0] });
   });
 });
 
@@ -622,7 +479,7 @@ app.get('/items/:id', isLoggedIn, (req, res) => {
 // ===================================================================
 
 // GET /items/:id/edit — show the edit form, pre-filled with current data
-app.get('/items/:id/edit', isLoggedIn, isStaffOrAdmin, (req, res) => {
+app.get('/items/:id/edit', isLoggedIn, (req, res) => {
   const sql = 'SELECT * FROM items WHERE item_id = ?';
 
   connection.query(sql, [req.params.id], (error, results) => {
@@ -638,7 +495,7 @@ app.get('/items/:id/edit', isLoggedIn, isStaffOrAdmin, (req, res) => {
 });
 
 // POST /items/:id/edit — save the changes
-app.post('/items/:id/edit', isLoggedIn, isStaffOrAdmin, (req, res) => {
+app.post('/items/:id/edit', isLoggedIn, (req, res) => {
   const { item_name, category, description, location_found, date_found } = req.body;
   const itemId = req.params.id;
 
@@ -721,7 +578,7 @@ app.post('/items/:id/edit', isLoggedIn, isStaffOrAdmin, (req, res) => {
 });
 
 // GET /items/:id/history — view the edit history for an item
-app.get('/items/:id/history', isLoggedIn, isStaffOrAdmin, (req, res) => {
+app.get('/items/:id/history', isLoggedIn, (req, res) => {
   // JOIN against users so the log shows who made each edit, not just a
   // numeric user_id.
   const sql = `SELECT l.log_id, l.changes_summary, l.changed_at, u.username AS edited_by_username
@@ -787,15 +644,13 @@ app.get('/items/:id/claim', isLoggedIn, (req, res) => {
 });
 
 // POST /items/:id/claim — submit a claim
-// Multiple claims per item are allowed — anyone can submit a claim and
-// staff compare them all to find the real owner. The item status is NOT
-// flipped to 'pending' here anymore; it stays 'unclaimed' so other users
-// can still see and claim it. Status only changes when staff approve/reject
-// via POST /claims/:id/review below.
 app.post('/items/:id/claim', isLoggedIn, (req, res) => {
   const { proof_description } = req.body;
   const itemId = req.params.id;
 
+  // Look the item up first — needed either way (to re-render the form on a
+  // validation error, or just to confirm it exists before the INSERT below,
+  // since claims.item_id has a FOREIGN KEY on items).
   const fetchSql = 'SELECT * FROM items WHERE item_id = ?';
   connection.query(fetchSql, [itemId], (fetchErr, results) => {
     if (fetchErr) {
@@ -808,128 +663,57 @@ app.post('/items/:id/claim', isLoggedIn, (req, res) => {
     if (!proof_description) {
       return res.render('items/claim', {
         item: results[0],
-        error: 'Please describe something about the item before submitting your claim.',
+        error: 'Please describe the item before submitting your claim.',
       });
     }
 
-    // Check if this user has already submitted a pending claim for this item
-    // — no point letting the same person submit duplicates.
-    const dupSql = "SELECT claim_id FROM claims WHERE item_id = ? AND claimed_by = ? AND claim_status = 'pending'";
-    connection.query(dupSql, [itemId, req.session.user.user_id], (dupErr, dupResults) => {
-      if (dupErr) {
-        console.error('Database query error:', dupErr.message);
+    // claimed_by always comes from the session, never the form — same
+    // rule Shernice follows for reported_by above.
+    const insertSql = 'INSERT INTO claims (item_id, claimed_by, proof_description) VALUES (?, ?, ?)';
+    connection.query(insertSql, [itemId, req.session.user.user_id, proof_description], (insertErr) => {
+      if (insertErr) {
+        console.error('Database query error:', insertErr.message);
         return res.status(500).send('Something went wrong. Please try again.');
       }
-      if (dupResults.length > 0) {
-        return res.render('items/claim', {
-          item: results[0],
-          error: 'You already have a pending claim for this item.',
-        });
-      }
 
-      // claimed_by always comes from the session, never the form.
-      const insertSql = 'INSERT INTO claims (item_id, claimed_by, proof_description) VALUES (?, ?, ?)';
-      connection.query(insertSql, [itemId, req.session.user.user_id, proof_description], (insertErr) => {
-        if (insertErr) {
-          console.error('Database query error:', insertErr.message);
+      // Flip the item to 'pending' so it drops out of the "unclaimed" list
+      // while staff review it (see GET /claims below).
+      const updateSql = 'UPDATE items SET status = ? WHERE item_id = ?';
+      connection.query(updateSql, ['pending', itemId], (updateErr) => {
+        if (updateErr) {
+          console.error('Database query error:', updateErr.message);
           return res.status(500).send('Something went wrong. Please try again.');
         }
-        // Item stays 'unclaimed' — staff review all claims together and
-        // flip the status only when they approve one (see POST /claims/:id/review).
         res.redirect('/items/' + itemId);
       });
     });
   });
 });
 
-// GET /claims — staff view: browse pending claims grouped by category.
-app.get('/claims', isLoggedIn, isStaffOrAdmin, (req, res) => {
-  const activeCategory = req.query.category || null;
-
-  // Get all distinct categories that currently have pending claims,
-  // so the category nav only shows relevant ones.
-  const catSql = `SELECT DISTINCT i.category
+// GET /claims — staff view of pending claims
+app.get('/claims', isLoggedIn, isAdmin, (req, res) => {
+  // JOIN against items and users so the staff view gets the item's name and
+  // the claimant's username in one round trip.
+  const sql = `SELECT c.claim_id, c.proof_description, c.created_at,
+        i.item_id, i.item_name,
+        u.username AS claimant_username
       FROM claims c
       JOIN items i ON c.item_id = i.item_id
+      JOIN users u ON c.claimed_by = u.user_id
       WHERE c.claim_status = 'pending'
-      ORDER BY i.category ASC`;
+      ORDER BY c.created_at ASC`;
 
-  connection.query(catSql, (catErr, catResults) => {
-    if (catErr) {
-      console.error('Database query error:', catErr.message);
+  connection.query(sql, (error, results) => {
+    if (error) {
+      console.error('Database query error:', error.message);
       return res.status(500).send('Something went wrong. Please try again.');
     }
-    const categories = catResults.map(r => r.category);
-
-    // Items that have at least one pending claim, optionally filtered by
-    // category. GROUP BY + COUNT so the view can show how many claims
-    // each item has without a separate query per item.
-    let itemSql = `SELECT i.item_id, i.item_name, i.category, i.location_found,
-          COUNT(c.claim_id) AS claim_count
-        FROM claims c
-        JOIN items i ON c.item_id = i.item_id
-        WHERE c.claim_status = 'pending'`;
-    const itemParams = [];
-
-    if (activeCategory) {
-      itemSql += ' AND i.category = ?';
-      itemParams.push(activeCategory);
-    }
-
-    itemSql += ' GROUP BY i.item_id ORDER BY i.category ASC, i.item_name ASC';
-
-    connection.query(itemSql, itemParams, (itemErr, itemResults) => {
-      if (itemErr) {
-        console.error('Database query error:', itemErr.message);
-        return res.status(500).send('Something went wrong. Please try again.');
-      }
-      res.render('claims/index', {
-        categories,
-        items: itemResults,
-        activeCategory,
-      });
-    });
-  });
-});
-
-// GET /claims/item/:id — staff view of all pending claims for one item.
-// Registered before POST /claims/:id/review so Express doesn't treat
-// "item" as a claim ID.
-app.get('/claims/item/:id', isLoggedIn, isStaffOrAdmin, (req, res) => {
-  const itemId = req.params.id;
-
-  const itemSql = 'SELECT * FROM items WHERE item_id = ?';
-  connection.query(itemSql, [itemId], (itemErr, itemResults) => {
-    if (itemErr) {
-      console.error('Database query error:', itemErr.message);
-      return res.status(500).send('Something went wrong. Please try again.');
-    }
-    if (itemResults.length === 0) {
-      return res.status(404).send('Item not found.');
-    }
-
-    const claimsSql = `SELECT c.claim_id, c.proof_description, c.created_at,
-          u.username AS claimant_username
-        FROM claims c
-        JOIN users u ON c.claimed_by = u.user_id
-        WHERE c.item_id = ? AND c.claim_status = 'pending'
-        ORDER BY c.created_at ASC`;
-
-    connection.query(claimsSql, [itemId], (claimsErr, claimsResults) => {
-      if (claimsErr) {
-        console.error('Database query error:', claimsErr.message);
-        return res.status(500).send('Something went wrong. Please try again.');
-      }
-      res.render('claims/item', {
-        item: itemResults[0],
-        claims: claimsResults,
-      });
-    });
+    res.render('claims/index', { claims: results });
   });
 });
 
 // POST /claims/:id/review — approve or reject a claim
-app.post('/claims/:id/review', isLoggedIn, isStaffOrAdmin, (req, res) => {
+app.post('/claims/:id/review', isLoggedIn, isAdmin, (req, res) => {
   const { decision } = req.body;
   const claimId = req.params.id;
 
@@ -959,31 +743,16 @@ app.post('/claims/:id/review', isLoggedIn, isStaffOrAdmin, (req, res) => {
       }
 
       // Approving hands the item to the claimant for good; rejecting
-      // leaves it open so other claimants' submissions stay active.
-      // Only flip status to 'claimed' on approval — rejection just
-      // marks this one claim as rejected, item stays 'unclaimed'.
-      if (decision === 'approved') {
-        const updateItemSql = 'UPDATE items SET status = ? WHERE item_id = ?';
-        connection.query(updateItemSql, ['claimed', claim.item_id], (updateItemErr) => {
-          if (updateItemErr) {
-            console.error('Database query error:', updateItemErr.message);
-            return res.status(500).send('Something went wrong. Please try again.');
-          }
-          // Also reject all other pending claims for this item now that
-          // one has been approved — no point leaving them open.
-          const rejectOthersSql = "UPDATE claims SET claim_status = 'rejected' WHERE item_id = ? AND claim_id != ? AND claim_status = 'pending'";
-          connection.query(rejectOthersSql, [claim.item_id, claimId], (rejectErr) => {
-            if (rejectErr) {
-              console.error('Database query error:', rejectErr.message);
-              // Non-fatal — the approval already went through.
-            }
-            res.redirect('/claims/item/' + claim.item_id);
-          });
-        });
-      } else {
-        // Rejection: item stays unclaimed, other claims stay open.
-        res.redirect('/claims/item/' + claim.item_id);
-      }
+      // reopens it instead of leaving it stuck on 'pending' forever.
+      const newItemStatus = decision === 'approved' ? 'claimed' : 'unclaimed';
+      const updateItemSql = 'UPDATE items SET status = ? WHERE item_id = ?';
+      connection.query(updateItemSql, [newItemStatus, claim.item_id], (updateItemErr) => {
+        if (updateItemErr) {
+          console.error('Database query error:', updateItemErr.message);
+          return res.status(500).send('Something went wrong. Please try again.');
+        }
+        res.redirect('/claims');
+      });
     });
   });
 });

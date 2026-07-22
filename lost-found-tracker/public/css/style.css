@@ -1,136 +1,180 @@
 :root {
   --accent: #156082;
   --accent-dark: #0e2841;
-  --bg: #f7f7f5;
+  --accent-light: #e8f3f8;
+  --bg: #eef2f5;
   --card: #ffffff;
   --border: #e2e2df;
   --text: #2c2c2a;
   --text-muted: #6b6b67;
   --danger: #b3261e;
   --success: #196b24;
-  --radius: 8px;
+  --warning: #d97706;
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+  font-family: -apple-system, "Segoe UI", "Inter", Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
-  line-height: 1.5;
+  line-height: 1.6;
+  min-height: 100vh;
 }
 
+/* ── Navbar ─────────────────────────────────────────── */
 .navbar {
   background: var(--accent-dark);
   color: white;
-  padding: 1rem 1.5rem;
+  padding: 0.85rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .navbar a {
-  color: white;
+  color: rgba(255,255,255,0.85);
   text-decoration: none;
   margin-left: 1rem;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
+  transition: color 0.15s;
 }
 
-.navbar a:hover { text-decoration: underline; }
+.navbar a:hover { color: white; }
 
 .navbar .brand {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1.1rem;
+  color: white;
+  letter-spacing: -0.01em;
 }
 
+/* ── Layout ──────────────────────────────────────────── */
 .container {
-  max-width: 800px;
+  max-width: 1100px;
   margin: 2rem auto;
-  padding: 0 1.5rem;
+  padding: 0 2rem;
 }
 
+/* ── Cards ───────────────────────────────────────────── */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.5rem;
   margin-bottom: 1rem;
+  box-shadow: var(--shadow);
 }
 
-h1, h2, h3 { color: var(--accent-dark); }
+h1, h2, h3 { color: var(--accent-dark); letter-spacing: -0.01em; }
 
+/* ── Buttons ─────────────────────────────────────────── */
 .btn {
   display: inline-block;
   background: var(--accent);
   color: white;
   border: none;
-  padding: 0.6rem 1.2rem;
+  padding: 0.6rem 1.3rem;
   border-radius: var(--radius);
   cursor: pointer;
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.93rem;
+  font-weight: 500;
+  transition: background 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 3px rgba(37,99,235,0.3);
 }
 
-.btn:hover { background: var(--accent-dark); }
+.btn:hover {
+  background: #0e4f6a;
+  box-shadow: 0 2px 8px rgba(21,96,130,0.35);
+}
 
-.btn-danger { background: var(--danger); }
-.btn-danger:hover { background: #7a1a15; }
+.btn-danger { background: var(--danger); box-shadow: none; }
+.btn-danger:hover { background: #b91c1c; }
 
+.btn-outline {
+  background: transparent;
+  border: 2px solid white;
+  color: white;
+  box-shadow: none;
+}
+.btn-outline:hover {
+  background: white;
+  color: var(--accent-dark);
+}
+
+.btn-sm {
+  padding: 0.38rem 0.9rem;
+  font-size: 0.83rem;
+}
+
+/* ── Forms ───────────────────────────────────────────── */
 form {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  max-width: 420px;
+  max-width: 440px;
 }
 
-label { font-weight: 600; font-size: 0.9rem; }
+label { font-weight: 600; font-size: 0.88rem; color: var(--text); }
 
 input, select, textarea {
-  padding: 0.55rem;
-  border: 1px solid var(--border);
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid var(--border);
   border-radius: var(--radius);
   font-size: 0.95rem;
   font-family: inherit;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
 }
 
 .error {
-  background: #fbeaea;
+  background: #fef2f2;
   color: var(--danger);
-  padding: 0.6rem 1rem;
+  padding: 0.65rem 1rem;
   border-radius: var(--radius);
   font-size: 0.9rem;
+  border: 1px solid #fecaca;
 }
 
-.item-list { list-style: none; padding: 0; }
-
-.item-list li {
-  background: var(--card);
-  border: 1px solid var(--border);
+.success {
+  background: #f0fdf4;
+  color: var(--success);
+  padding: 0.65rem 1rem;
   border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
+  font-size: 0.9rem;
+  border: 1px solid #bbf7d0;
 }
 
+/* ── Status badges ───────────────────────────────────── */
 .status-badge {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.6rem;
+  font-size: 0.73rem;
+  font-weight: 600;
+  padding: 0.22rem 0.65rem;
   border-radius: 999px;
-  background: var(--border);
-  color: var(--text-muted);
   white-space: nowrap;
+  letter-spacing: 0.01em;
+  text-transform: capitalize;
 }
 
-.status-unclaimed { background: #fdecd2; color: #854f0b; }
-.status-pending { background: #e6f1fb; color: #0c447c; }
-.status-claimed { background: #e0efd8; color: var(--success); }
+.status-unclaimed { background: #fef3c7; color: #92400e; }
+.status-pending   { background: #dbeafe; color: #1e40af; }
+.status-claimed   { background: #dcfce7; color: #166534; }
+.status-removed   { background: #f1f5f9; color: #94a3b8; }
 
+/* ── Filters (Search page) ───────────────────────────── */
 .filters {
   flex-direction: row;
   flex-wrap: wrap;
@@ -139,13 +183,389 @@ input, select, textarea {
   max-width: none;
 }
 
-.filters select, .filters input {
-  width: auto;
-}
+.filters select, .filters input { width: auto; }
 
+/* ── Footer ──────────────────────────────────────────── */
 footer {
   text-align: center;
   color: var(--text-muted);
-  font-size: 0.85rem;
-  padding: 2rem 1rem;
+  font-size: 0.82rem;
+  padding: 2.5rem 1rem;
+  border-top: 1px solid var(--border);
+  margin-top: 3rem;
 }
+
+/* ============================================================
+   Hui Xing — Browse page (/items)
+   ============================================================ */
+
+/* Hero banner */
+.browse-hero {
+  background: linear-gradient(135deg, var(--accent-dark) 0%, var(--accent) 100%);
+  padding: 2.25rem 2rem;
+  color: white;
+  width: 100%;
+}
+
+.browse-hero-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.browse-title {
+  color: white;
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+/* Status tabs */
+.status-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.tab-link {
+  padding: 0.6rem 1.3rem;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 0.93rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+  font-weight: 500;
+}
+
+.tab-link:hover { color: var(--accent); }
+
+.tab-active {
+  color: var(--accent);
+  font-weight: 700;
+  border-bottom-color: var(--accent);
+}
+
+/* Sort buttons */
+.sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.sort-label {
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  margin-right: 0.15rem;
+  font-weight: 500;
+}
+
+.sort-btn {
+  display: inline-block;
+  padding: 0.32rem 0.85rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--text-muted);
+  font-size: 0.83rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.sort-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+.sort-btn-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(37,99,235,0.25);
+}
+
+.browse-period-note {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.browse-period-note a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.browse-period-note a:hover { text-decoration: underline; }
+
+/* Item cards (Browse page uses .item-card, Search page uses .item-list li) */
+.item-list { list-style: none; padding: 0; margin: 0; }
+
+.item-list li,
+.item-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  box-shadow: var(--shadow);
+}
+
+.item-list li:hover,
+.item-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  border-color: #c7d2e0;
+}
+
+.item-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.item-thumb-placeholder {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.item-info { flex: 1; min-width: 0; }
+
+.item-name {
+  font-weight: 600;
+  font-size: 0.97rem;
+  color: var(--text);
+}
+
+.item-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  background: var(--card);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  font-size: 0.88rem;
+}
+
+.page-btn {
+  display: inline-block;
+  padding: 0.42rem 1.1rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--accent);
+  background: var(--card);
+  font-weight: 500;
+  transition: all 0.15s;
+  box-shadow: var(--shadow);
+}
+
+.page-btn:hover {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.page-info { color: var(--text-muted); }
+
+/* ── Claim review (Wei Qi / admin) ───────────────────── */
+.claim-count-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  white-space: nowrap;
+}
+
+.claim-review-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.claim-review-meta {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.claim-review-user {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.claim-review-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.claim-review-proof {
+  font-size: 0.93rem;
+  color: var(--text);
+  font-style: italic;
+  padding: 0.6rem 0.85rem;
+  background: var(--bg);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.claim-review-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ── Admin colour scheme ─────────────────────────────
+   Applied via <body class="admin-theme"> when the
+   logged-in user has role = 'admin'. Overrides the
+   CSS variables so every component picks up the new
+   colours automatically — no duplicate rules needed. */
+.admin-theme {
+  --accent: #7c3aed;
+  --accent-dark: #3b0764;
+  --accent-light: #f3e8ff;
+  --bg: #f5f3ff;
+  --border: #e4d9f7;
+}
+
+.admin-theme .navbar {
+  background: linear-gradient(90deg, #3b0764 0%, #6d28d9 100%);
+}
+
+.admin-theme .browse-hero {
+  background: linear-gradient(135deg, #3b0764 0%, #7c3aed 100%);
+}
+
+.admin-theme .btn {
+  background: var(--accent);
+  box-shadow: 0 1px 3px rgba(124,58,237,0.3);
+}
+
+.admin-theme .btn:hover {
+  background: #6d28d9;
+  box-shadow: 0 2px 8px rgba(124,58,237,0.35);
+}
+
+.admin-theme .tab-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.admin-theme .sort-btn-active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.admin-theme .claim-review-proof {
+  border-left-color: var(--accent);
+}
+
+.admin-theme input:focus,
+.admin-theme select:focus,
+.admin-theme textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+}
+
+/* ── Staff colour scheme ──────────────────────────────
+   Applied via <body class="staff-theme"> when the
+   logged-in user has role = 'staff'. Same variable
+   override approach as .admin-theme above. */
+.staff-theme {
+  --accent: #16a34a;
+  --accent-dark: #14532d;
+  --accent-light: #dcfce7;
+  --bg: #f0fdf4;
+  --border: #bbf7d0;
+}
+
+.staff-theme .navbar {
+  background: linear-gradient(90deg, #14532d 0%, #15803d 100%);
+}
+
+.staff-theme .browse-hero {
+  background: linear-gradient(135deg, #14532d 0%, #16a34a 100%);
+}
+
+.staff-theme .btn {
+  background: var(--accent);
+  box-shadow: 0 1px 3px rgba(22,163,74,0.3);
+}
+
+.staff-theme .btn:hover {
+  background: #15803d;
+  box-shadow: 0 2px 8px rgba(22,163,74,0.35);
+}
+
+.staff-theme .tab-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.staff-theme .sort-btn-active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.staff-theme .claim-review-proof {
+  border-left-color: var(--accent);
+}
+
+.staff-theme input:focus,
+.staff-theme select:focus,
+.staff-theme textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(22,163,74,0.12);
+}
+
+/* Role badges in admin user management table */
+.role-student  { background: #fef3c7; color: #92400e; }
+.role-staff    { background: #dcfce7; color: #166534; }
+.role-admin    { background: #ede9fe; color: #5b21b6; }

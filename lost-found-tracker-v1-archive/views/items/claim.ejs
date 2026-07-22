@@ -1,0 +1,17 @@
+<%- include('../partials/header') %>
+  <!-- Jun Hao — Claim Verification (enhancement): form a student fills in
+       from the "Claim this item" button on views/items/show.ejs. Posts to
+       routes/claims.js POST /items/:id/claim. -->
+  <div class="card">
+    <h1>Claim: <%= item.item_name %></h1>
+    <% if (error) { %>
+      <p class="error"><%= error %></p>
+    <% } %>
+    <form action="/items/<%= item.item_id %>/claim" method="POST">
+      <label for="proof_description">Describe something only the owner would know (e.g. a mark, contents, sticker)</label>
+      <textarea id="proof_description" name="proof_description" rows="3" required></textarea>
+
+      <button type="submit" class="btn">Submit claim</button>
+    </form>
+  </div>
+<%- include('../partials/footer') %>

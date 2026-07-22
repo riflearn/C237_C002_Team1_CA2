@@ -1,52 +1,90 @@
 <%- include('../partials/header') %>
-  <h1>Found Items</h1>
 
-  <!-- Hui Xing: search/filter now lives on its own page (Jun Hao's) —
-       this page is a plain browse list. -->
-  <p><a href="/items/search" class="btn">Search &amp; Filter &rarr;</a></p>
+<div class="browse-hero">
+  <div class="browse-hero-inner">
+    <h1 class="browse-title">Found Items</h1>
+    <a href="/items/search" class="btn btn-outline">Search &amp; Filter &rarr;</a>
+  </div>
+</div>
 
-  <!-- Hui Xing — Sorting: each link sets ?sort=/?dir= in the URL, read
-       and validated against an allowlist in app.js's GET /items. -->
-  <p style="font-size:0.9rem;">
-    Sort by:
-    <a href="/items?sort=created_at&dir=desc">Newest</a> &middot;
-    <a href="/items?sort=date_found&dir=desc">Date found</a> &middot;
-    <a href="/items?sort=item_name&dir=asc">Name (A-Z)</a> &middot;
-    <a href="/items?sort=status&dir=asc">Status</a>
-  </p>
+<div class="container">
+  <!-- Hui Xing — Status tabs -->
+  <div class="status-tabs">
+    <a href="/items?status=unclaimed&sort=<%= sort %>&dir=<%= dir %>"
+       class="tab-link <%= activeStatus === 'unclaimed' ? 'tab-active' : '' %>">
+      Unclaimed
+    </a>
+    <a href="/items?status=pending&sort=<%= sort %>&dir=<%= dir %>"
+       class="tab-link <%= activeStatus === 'pending' ? 'tab-active' : '' %>">
+      Pending Verification
+    </a>
+    <a href="/items?status=claimed&sort=<%= sort %>&dir=<%= dir %>"
+       class="tab-link <%= activeStatus === 'claimed' ? 'tab-active' : '' %>">
+      Claimed
+    </a>
+  </div>
 
+  <!-- Hui Xing — Sort buttons: active sort is highlighted, resets page to 1 -->
+  <div class="sort-bar">
+    <span class="sort-label">Sort by</span>
+    <a href="/items?status=<%= activeStatus %>&sort=created_at&dir=desc"
+       class="sort-btn <%= sort === 'created_at' ? 'sort-btn-active' : '' %>">Newest</a>
+    <a href="/items?status=<%= activeStatus %>&sort=date_found&dir=desc"
+       class="sort-btn <%= sort === 'date_found' ? 'sort-btn-active' : '' %>">Date Found</a>
+    <a href="/items?status=<%= activeStatus %>&sort=item_name&dir=asc"
+       class="sort-btn <%= sort === 'item_name' ? 'sort-btn-active' : '' %>">Name (A–Z)</a>
+    <span class="browse-period-note">Showing last 30 days &middot; <a href="/items/search">See all &rarr;</a></span>
+  </div>
+
+  <!-- Item list -->
   <ul class="item-list">
     <% items.forEach(item => { %>
-      <li>
+      <li class="item-card">
         <% if (item.image) { %>
-          <img src="/images/<%= item.image %>" alt="<%= item.item_name %>" style="width:56px; height:56px; object-fit:cover; border-radius:var(--radius);">
-        <% } %>
-        <div>
-          <strong><%= item.item_name %></strong> — <%= item.category %>
-          <div style="font-size:0.85rem; color:var(--text-muted);">
-            <%= item.location_found %> &middot; <%= item.date_found %>
+          <img src="/images/<%= item.image %>" alt="<%= item.item_name %>" class="item-thumb">
+        <% } else { %>
+          <div class="item-thumb item-thumb-placeholder">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+            </svg>
           </div>
+        <% } %>
+        <div class="item-info">
+          <div class="item-name"><%= item.item_name %></div>
+          <div class="item-meta"><%= item.category %> &middot; <%= item.location_found %> &middot; <%= item.date_found %></div>
         </div>
         <span class="status-badge status-<%= item.status %>"><%= item.status %></span>
-        <a href="/items/<%= item.item_id %>" class="btn">View</a>
+        <a href="/items/<%= item.item_id %>" class="btn btn-sm">View</a>
       </li>
     <% }) %>
   </ul>
+
   <% if (items.length === 0) { %>
-    <p>No items to show.</p>
+    <div class="empty-state">
+      <p>No <%= activeStatus %> items in the last 30 days.</p>
+      <p style="font-size:0.85rem; margin-top:0.5rem;">
+        Looking for older items? <a href="/items/search">Use Search &amp; Filter &rarr;</a>
+      </p>
+    </div>
   <% } %>
 
-  <!-- Hui Xing — Pagination: carries the current sort/dir forward so
-       paging doesn't reset the sort order. -->
-  <p>
+  <!-- Hui Xing — Pagination: carries status + sort/dir forward -->
+  <div class="pagination">
     <% if (page > 1) { %>
-      <a href="/items?page=<%= page - 1 %>&sort=<%= sort %>&dir=<%= dir %>">&larr; Prev</a>
+      <a href="/items?status=<%= activeStatus %>&page=<%= page - 1 %>&sort=<%= sort %>&dir=<%= dir %>" class="page-btn">&larr; Prev</a>
     <% } %>
-    Page <%= page %> of <%= totalPages %>
+    <span class="page-info">Page <%= page %> of <%= totalPages %></span>
     <% if (page < totalPages) { %>
-      <a href="/items?page=<%= page + 1 %>&sort=<%= sort %>&dir=<%= dir %>">Next &rarr;</a>
+      <a href="/items?status=<%= activeStatus %>&page=<%= page + 1 %>&sort=<%= sort %>&dir=<%= dir %>" class="page-btn">Next &rarr;</a>
     <% } %>
-  </p>
+  </div>
 
-  <a href="/items/new" class="btn">+ Report a found item</a>
+  <% if (user && (user.role === 'staff' || user.role === 'admin')) { %>
+    <div style="margin-top: 1.5rem;">
+      <a href="/items/new" class="btn">+ Report a found item</a>
+    </div>
+  <% } %>
+
+</div>
+
 <%- include('../partials/footer') %>

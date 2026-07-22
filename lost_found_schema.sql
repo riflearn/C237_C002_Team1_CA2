@@ -14,7 +14,7 @@ CREATE TABLE users (
   username    VARCHAR(50)  NOT NULL UNIQUE,
   password    VARCHAR(255) NOT NULL,        -- SHA1 hash (via MySQL's SHA1()), never plain text
   email       VARCHAR(100) NOT NULL,
-  role        ENUM('student', 'admin') NOT NULL DEFAULT 'student',
+  role        ENUM('student', 'staff', 'admin') NOT NULL DEFAULT 'student',
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
