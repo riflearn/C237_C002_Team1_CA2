@@ -21,3 +21,7 @@ presentation-prep/
 # Claude session-continuity notes — for re-orienting after context
 # compaction, not part of the app, not shared via repo.
 claude-notes/
+
+# Old pre-v2 app version — kept locally as a snapshot, but the pre-v2 code is
+# already recoverable from git history, so it doesn't need to live in the repo.
+archive/
