@@ -15,6 +15,7 @@ CREATE TABLE users (
   password    VARCHAR(255) NOT NULL,        -- SHA1 hash (via MySQL's SHA1()), never plain text
   email       VARCHAR(100) NOT NULL,
   role        ENUM('student', 'staff', 'admin') NOT NULL DEFAULT 'student',
+  status      ENUM('active', 'disabled') NOT NULL DEFAULT 'active', -- "deleting" a user disables their login instead of a hard DELETE, since items/claims/edits/searches all have a FOREIGN KEY on user_id
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

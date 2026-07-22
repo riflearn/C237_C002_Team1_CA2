@@ -170,7 +170,12 @@ app.post('/login', (req, res) => {
   // Hash the submitted password with SHA1() inside the query and compare it
   // straight to the stored hash — a match means the row exists, so no
   // separate compare step is needed (same pattern as L19's RegistrationApp).
-  const sql = 'SELECT * FROM users WHERE username = ? AND password = SHA1(?)';
+  // status = 'active' is in the same WHERE, not a separate check afterwards
+  // — a disabled account fails to log in with the exact same "Invalid
+  // username or password" message as a wrong password, on purpose (same
+  // reasoning as not distinguishing "no such username" from "wrong
+  // password" above: don't leak account status to a logged-out visitor).
+  const sql = "SELECT * FROM users WHERE username = ? AND password = SHA1(?) AND status = 'active'";
 
   connection.query(sql, [username, password], (error, results) => {
     if (error) {
@@ -284,13 +289,15 @@ app.post('/profile', isLoggedIn, (req, res) => {
 
 // ===================================================================
 // Firdaus — User Management (admin only)
-// Lets an admin see all registered users and promote/demote their role.
-// An admin cannot demote themselves — prevents accidental lockout.
+// Lets an admin see all registered users, promote/demote their role, and
+// disable/reactivate their login ("delete" a user without a hard DELETE —
+// see the schema comment on users.status for why). An admin cannot change
+// their own role or disable themselves — prevents accidental lockout.
 // ===================================================================
 
 // GET /admin/users — list all users with their roles
 app.get('/admin/users', isLoggedIn, isAdmin, (req, res) => {
-  const sql = 'SELECT user_id, username, email, role FROM users ORDER BY role ASC, username ASC';
+  const sql = 'SELECT user_id, username, email, role, status FROM users ORDER BY role ASC, username ASC';
   connection.query(sql, (error, results) => {
     if (error) {
       console.error('Database query error:', error.message);
@@ -368,6 +375,45 @@ app.post('/admin/users/:id/role', isLoggedIn, isAdmin, (req, res) => {
       return res.status(500).send('Something went wrong. Please try again.');
     }
     res.redirect('/admin/users?success=updated');
+  });
+});
+
+// POST /admin/users/:id/delete — "delete" a user
+// Not a hard DELETE: items.reported_by, claims.claimed_by/reviewed_by,
+// item_edit_log.edited_by and search_history.user_id all have a FOREIGN KEY
+// on users.user_id, so a real DELETE would fail the moment that user has
+// done anything at all in the app — same reason Wei Qi's item delete is a
+// soft delete. Flipping status to 'disabled' blocks them from logging in
+// (see the status check in POST /login) while keeping every row they're
+// linked to intact.
+app.post('/admin/users/:id/delete', isLoggedIn, isAdmin, (req, res) => {
+  const targetId = parseInt(req.params.id);
+
+  // Guard: admin cannot disable their own account — prevents accidental
+  // lockout, same rule as the role-change route above.
+  if (targetId === req.session.user.user_id) {
+    return res.redirect('/admin/users?success=cannot-self');
+  }
+
+  const sql = "UPDATE users SET status = 'disabled' WHERE user_id = ?";
+  connection.query(sql, [targetId], (error) => {
+    if (error) {
+      console.error('Database query error:', error.message);
+      return res.status(500).send('Something went wrong. Please try again.');
+    }
+    res.redirect('/admin/users?success=deleted');
+  });
+});
+
+// POST /admin/users/:id/reactivate — undo a delete
+app.post('/admin/users/:id/reactivate', isLoggedIn, isAdmin, (req, res) => {
+  const sql = "UPDATE users SET status = 'active' WHERE user_id = ?";
+  connection.query(sql, [req.params.id], (error) => {
+    if (error) {
+      console.error('Database query error:', error.message);
+      return res.status(500).send('Something went wrong. Please try again.');
+    }
+    res.redirect('/admin/users?success=reactivated');
   });
 });
 
