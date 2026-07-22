@@ -8,15 +8,14 @@
 </div>
 
 <div class="container">
-  <!-- Hui Xing — Status tabs -->
+  <!-- Hui Xing — Status tabs. Only two states an item can actually be in:
+       'unclaimed' (still up for grabs, even if claims are awaiting review)
+       or 'claimed' (a claim was approved). Items never sit in a separate
+       'pending' state — see the claim workflow in app.js. -->
   <div class="status-tabs">
     <a href="/items?status=unclaimed&sort=<%= sort %>&dir=<%= dir %>"
        class="tab-link <%= activeStatus === 'unclaimed' ? 'tab-active' : '' %>">
       Unclaimed
-    </a>
-    <a href="/items?status=pending&sort=<%= sort %>&dir=<%= dir %>"
-       class="tab-link <%= activeStatus === 'pending' ? 'tab-active' : '' %>">
-      Pending Verification
     </a>
     <a href="/items?status=claimed&sort=<%= sort %>&dir=<%= dir %>"
        class="tab-link <%= activeStatus === 'claimed' ? 'tab-active' : '' %>">

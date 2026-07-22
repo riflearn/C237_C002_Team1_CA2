@@ -13,6 +13,9 @@
       <% if (user) { %>
         <a href="/items">Items</a>
         <a href="/items/search">Search</a>
+        <% if (user.role === 'student') { %>
+          <a href="/claims/mine">My Claims</a>
+        <% } %>
         <% if (user.role === 'staff' || user.role === 'admin') { %>
           <a href="/claims">Claims</a>
         <% } %>

@@ -30,7 +30,7 @@ CREATE TABLE items (
   description     TEXT,
   location_found  VARCHAR(100) NOT NULL,
   date_found      DATE NOT NULL,
-  status          ENUM('unclaimed', 'pending', 'claimed', 'removed') NOT NULL DEFAULT 'unclaimed',
+  status          ENUM('unclaimed', 'pending', 'claimed', 'removed') NOT NULL DEFAULT 'unclaimed', -- items only ever use 'unclaimed'/'claimed'/'removed'; 'pending' is a legacy value the app no longer sets (kept in the enum so old rows don't break)
   reported_by     INT NOT NULL,
   image           VARCHAR(255) NULL,          -- uploaded filename (Shernice's Image Upload feature), NULL if none
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

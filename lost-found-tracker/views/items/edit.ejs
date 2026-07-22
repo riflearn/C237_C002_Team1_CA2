@@ -2,14 +2,11 @@
   <div class="card">
     <h1>Edit item</h1>
 
-    <!-- TODO (Soe San): this form mirrors views/items/new.ejs — same fields,
-         same order — but pre-filled with the `item` object passed from
-         routes/edit.js, and posting to /items/:id/edit instead. -->
-
-    <!-- Soe San: uncommented and wired up below — same field set/order as
-         Shernice's views/items/new.ejs, pre-filled from `item`, and each
-         <option> marked selected when it matches the item's current
-         category so the dropdown doesn't reset on every edit. -->
+    <!-- Soe San — same field set/order as Shernice's views/items/new.ejs,
+         but pre-filled from the `item` object passed in by the
+         GET /items/:id/edit route in app.js, and each <option> marked
+         selected when it matches the item's current category so the
+         dropdown doesn't reset on every edit. -->
 
     <!-- Soe San — Edit History / Audit Log: link to the full change log
          for this item, kept on my own page rather than the item detail

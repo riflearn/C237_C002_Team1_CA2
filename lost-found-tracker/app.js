@@ -29,16 +29,20 @@ const imageUpload = multer({
   }),
 });
 
-// ----- MySQL connection -----
-// Callback-style connection (not a pool, not mysql2/promise) — same
-// connection.query(sql, params, (error, results) => {...}) pattern used
-// throughout C237L17's SupermarketApp — except credentials come from .env
-// instead of being written directly here. This repo is shared by all 6 of
-// us and everyone edits this same file for their own feature, so a secret
-// hardcoded here would get committed by whoever's local password happened
-// to be sitting in it. Each teammate keeps their own gitignored .env
-// (copy .env.example → .env, fill in your own local MySQL password).
-const connection = mysql.createConnection({
+// ----- MySQL connection pool -----
+// Same callback-style connection.query(sql, params, (error, results) => {...})
+// pattern used throughout C237L17's SupermarketApp — a POOL rather than a
+// single createConnection, though: pool.query() has the exact same signature,
+// so nothing else in this file changes. The reason for a pool is our cloud DB
+// (Azure) closes idle connections after a few minutes; a single connection
+// would then error out and crash the app the next time it's used, whereas a
+// pool just hands out a fresh connection automatically. The variable is still
+// called `connection` so every teammate's query below reads the same.
+// Credentials come from .env (not written here) because this repo is shared by
+// all 6 of us — a hardcoded secret would get committed by whoever's local
+// password happened to be sitting in it. Each teammate keeps their own
+// gitignored .env (copy .env.example → .env, fill in your own local password).
+const connection = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -51,14 +55,22 @@ const connection = mysql.createConnection({
   // via DB_SSL=true in your own .env, so switching to a cloud DB doesn't
   // break teammates still running MySQL locally.
   ...(process.env.DB_SSL === 'true' ? { ssl: { rejectUnauthorized: true } } : {}),
+  // Pool settings: keep a small number of reusable connections and queue
+  // any extra requests rather than erroring when they're all busy.
+  waitForConnections: true,
+  connectionLimit: 5,
+  queueLimit: 0,
 });
 
-connection.connect((err) => {
+// One-off startup check so a bad DB config still fails loudly at boot.
+// (A pool connects lazily, so we grab one connection just to confirm.)
+connection.getConnection((err, conn) => {
   if (err) {
     console.error('Error connecting to MySQL:', err);
     return;
   }
   console.log('Connected to MySQL database');
+  conn.release();
 });
 
 // ----- View engine + core middleware -----
@@ -480,9 +492,11 @@ app.get('/items', isLoggedIn, (req, res) => {
   const sortColumn = allowedSortColumns.includes(req.query.sort) ? req.query.sort : 'created_at';
   const sortDirection = req.query.dir === 'asc' ? 'ASC' : 'DESC';
 
-  // Status tab: 'unclaimed' | 'pending' | 'claimed' — defaults to 'unclaimed'.
-  // Validated against an allowlist for the same reason as sortColumn.
-  const allowedStatuses = ['unclaimed', 'pending', 'claimed'];
+  // Status tab: 'unclaimed' | 'claimed' — defaults to 'unclaimed'. Items only
+  // ever hold one of these two states (never a separate 'pending'), so those
+  // are the only two tabs. Validated against an allowlist for the same reason
+  // as sortColumn.
+  const allowedStatuses = ['unclaimed', 'claimed'];
   const activeStatus = allowedStatuses.includes(req.query.status) ? req.query.status : 'unclaimed';
 
   const perPage = 5;
@@ -816,11 +830,16 @@ app.post('/items/:id/delete', isLoggedIn, isAdmin, (req, res) => {
 // *submission* itself is open to any logged-in student, not staff-only.
 // ===================================================================
 
-// GET /items/:id/claim — show the claim form
+// GET /items/:id/claim — show the claim form.
+// Two guards before showing it: the item must still be unclaimed, and the
+// user must not already have a pending claim on it. In either case we send
+// them to the item detail page (which shows the right message) instead of
+// rendering an empty form they can't usefully submit.
 app.get('/items/:id/claim', isLoggedIn, (req, res) => {
+  const itemId = req.params.id;
   const sql = 'SELECT * FROM items WHERE item_id = ?';
 
-  connection.query(sql, [req.params.id], (error, results) => {
+  connection.query(sql, [itemId], (error, results) => {
     if (error) {
       console.error('Database query error:', error.message);
       return res.status(500).send('Something went wrong. Please try again.');
@@ -828,7 +847,24 @@ app.get('/items/:id/claim', isLoggedIn, (req, res) => {
     if (results.length === 0) {
       return res.status(404).send('Item not found.');
     }
-    res.render('items/claim', { item: results[0], error: null });
+    // Can only claim an item that's still up for grabs.
+    if (results[0].status !== 'unclaimed') {
+      return res.redirect('/items/' + itemId);
+    }
+
+    // Already have a pending claim here? The detail page shows "your claim
+    // has been submitted" — send them there rather than a fresh empty form.
+    const dupSql = "SELECT claim_id FROM claims WHERE item_id = ? AND claimed_by = ? AND claim_status = 'pending'";
+    connection.query(dupSql, [itemId, req.session.user.user_id], (dupErr, dupResults) => {
+      if (dupErr) {
+        console.error('Database query error:', dupErr.message);
+        return res.status(500).send('Something went wrong. Please try again.');
+      }
+      if (dupResults.length > 0) {
+        return res.redirect('/items/' + itemId);
+      }
+      res.render('items/claim', { item: results[0], error: null });
+    });
   });
 });
 
@@ -850,6 +886,11 @@ app.post('/items/:id/claim', isLoggedIn, (req, res) => {
     }
     if (results.length === 0) {
       return res.status(404).send('Item not found.');
+    }
+    // Guard: only unclaimed items can be claimed. Stops a direct POST to a
+    // claimed/removed item from creating a stray claim.
+    if (results[0].status !== 'unclaimed') {
+      return res.redirect('/items/' + itemId);
     }
     if (!proof_description) {
       return res.render('items/claim', {
@@ -885,6 +926,30 @@ app.post('/items/:id/claim', isLoggedIn, (req, res) => {
         res.redirect('/items/' + itemId);
       });
     });
+  });
+});
+
+// GET /claims/mine — the student's own side of the claim workflow: every
+// claim they've submitted and where it stands (pending / approved / rejected).
+// Without this, a student submits a claim and never finds out what happened.
+// Declared before /claims/item/:id so "mine" isn't mistaken for an item id.
+app.get('/claims/mine', isLoggedIn, (req, res) => {
+  // Scoped to the logged-in user's own claims via claimed_by — never a value
+  // from the URL, so nobody can read someone else's claims. JOIN items to show
+  // what each claim was for.
+  const sql = `SELECT c.claim_id, c.proof_description, c.claim_status, c.created_at,
+        i.item_id, i.item_name, i.category, i.location_found, i.image
+      FROM claims c
+      JOIN items i ON c.item_id = i.item_id
+      WHERE c.claimed_by = ?
+      ORDER BY c.created_at DESC`;
+
+  connection.query(sql, [req.session.user.user_id], (error, results) => {
+    if (error) {
+      console.error('Database query error:', error.message);
+      return res.status(500).send('Something went wrong. Please try again.');
+    }
+    res.render('claims/mine', { claims: results });
   });
 });
 

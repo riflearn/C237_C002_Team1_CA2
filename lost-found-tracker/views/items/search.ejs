@@ -26,7 +26,6 @@
     <select name="status">
       <option value="">Any status</option>
       <option value="unclaimed" <%= query.status === 'unclaimed' ? 'selected' : '' %>>Unclaimed</option>
-      <option value="pending" <%= query.status === 'pending' ? 'selected' : '' %>>Pending</option>
       <option value="claimed" <%= query.status === 'claimed' ? 'selected' : '' %>>Claimed</option>
     </select>
 
@@ -49,21 +48,33 @@
     </p>
   <% } %>
 
+  <!-- Same item-card layout as Hui Xing's Browse page (views/items/index.ejs)
+       so search results and the browse list look identical — thumbnail,
+       name/meta, status badge, View button. -->
   <ul class="item-list">
     <% items.forEach(item => { %>
-      <li>
-        <div>
-          <strong><%= item.item_name %></strong> — <%= item.category %>
-          <div style="font-size:0.85rem; color:var(--text-muted);">
-            <%= item.location_found %> &middot; <%= item.date_found %>
+      <li class="item-card">
+        <% if (item.image) { %>
+          <img src="/images/<%= item.image %>" alt="<%= item.item_name %>" class="item-thumb">
+        <% } else { %>
+          <div class="item-thumb item-thumb-placeholder">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+            </svg>
           </div>
+        <% } %>
+        <div class="item-info">
+          <div class="item-name"><%= item.item_name %></div>
+          <div class="item-meta"><%= item.category %> &middot; <%= item.location_found %> &middot; <%= item.date_found %></div>
         </div>
         <span class="status-badge status-<%= item.status %>"><%= item.status %></span>
-        <a href="/items/<%= item.item_id %>" class="btn">View</a>
+        <a href="/items/<%= item.item_id %>" class="btn btn-sm">View</a>
       </li>
     <% }) %>
   </ul>
   <% if (items.length === 0) { %>
-    <p>No items match your search.</p>
+    <div class="empty-state">
+      <p>No items match your search.</p>
+    </div>
   <% } %>
 <%- include('../partials/footer') %>

@@ -1,0 +1,61 @@
+<%- include('../partials/header') %>
+
+<!-- Wei Qi — Claim Verification Workflow (core feature): the student-facing
+     side. Shows the logged-in user their own submitted claims and the
+     outcome of each (pending / approved / rejected). Read-only. -->
+<div class="browse-hero">
+  <div class="browse-hero-inner">
+    <h1 class="browse-title">My Claims</h1>
+    <a href="/items" class="btn btn-outline">Browse items &rarr;</a>
+  </div>
+</div>
+
+<div class="container">
+
+  <% if (claims.length === 0) { %>
+    <div class="empty-state">
+      <p>You haven't claimed any items yet.</p>
+      <p style="font-size:0.85rem; margin-top:0.5rem;">
+        Found something that's yours? <a href="/items">Browse items &rarr;</a>
+      </p>
+    </div>
+  <% } else { %>
+
+    <ul class="item-list">
+      <% claims.forEach(claim => { %>
+        <li class="item-card">
+          <% if (claim.image) { %>
+            <img src="/images/<%= claim.image %>" alt="<%= claim.item_name %>" class="item-thumb">
+          <% } else { %>
+            <div class="item-thumb item-thumb-placeholder">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+              </svg>
+            </div>
+          <% } %>
+          <div class="item-info">
+            <div class="item-name"><%= claim.item_name %></div>
+            <div class="item-meta"><%= claim.category %> &middot; <%= claim.location_found %></div>
+            <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.25rem;">
+              You wrote: "<%= claim.proof_description %>"
+            </div>
+          </div>
+          <!-- Reuse the existing badge palette: pending = blue (status-pending),
+               approved = green (status-claimed), rejected = grey (status-removed). -->
+          <% if (claim.claim_status === 'approved') { %>
+            <span class="status-badge status-claimed">approved</span>
+          <% } else if (claim.claim_status === 'rejected') { %>
+            <span class="status-badge status-removed">rejected</span>
+          <% } else { %>
+            <span class="status-badge status-pending">pending</span>
+          <% } %>
+          <a href="/items/<%= claim.item_id %>" class="btn btn-sm">View</a>
+        </li>
+      <% }) %>
+    </ul>
+
+  <% } %>
+
+</div>
+
+<%- include('../partials/footer') %>

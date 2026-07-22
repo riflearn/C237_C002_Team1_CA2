@@ -1,9 +1,8 @@
 <%- include('../partials/header') %>
   <div class="card">
-    <!-- TODO (Hui Xing): render the single `item` object passed from routes/items.js -->
-    <!-- Hui Xing: uncommented below — renders the `item` passed in from
-         routes/items.js, plus the role-gated action buttons that hand off
-         to Soe San's edit route, Wei Qi's delete route, and Jun Hao's claim
+    <!-- Hui Xing: renders the `item` passed in from the GET /items/:id
+         route in app.js, plus the role-gated action buttons that hand off
+         to Soe San's edit route, Wei Qi's delete route, and Wei Qi's claim
          form (only one of these should ever show for a given user/status). -->
     <h1><%= item.item_name %></h1>
     <% if (item.image) { %>

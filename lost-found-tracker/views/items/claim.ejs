@@ -1,7 +1,7 @@
 <%- include('../partials/header') %>
-  <!-- Jun Hao — Claim Verification (enhancement): form a student fills in
-       from the "Claim this item" button on views/items/show.ejs. Posts to
-       routes/claims.js POST /items/:id/claim. -->
+  <!-- Wei Qi — Claim Verification Workflow (core feature): form a student
+       fills in from the "Claim this item" button on views/items/show.ejs.
+       Posts to POST /items/:id/claim in app.js. -->
   <div class="card">
     <h1>Claim: <%= item.item_name %></h1>
     <% if (error) { %>
