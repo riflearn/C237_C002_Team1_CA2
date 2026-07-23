@@ -8,10 +8,13 @@
 </div>
 
 <div class="container">
-  <!-- Hui Xing — Status tabs. Only two states an item can actually be in:
-       'unclaimed' (still up for grabs, even if claims are awaiting review)
-       or 'claimed' (a claim was approved). Items never sit in a separate
-       'pending' state — see the claim workflow in app.js. -->
+  <% if (success === 'restored') { %>
+    <p class="success">Item restored — it's back to Unclaimed.</p>
+  <% } %>
+
+  <!-- Hui Xing — Status tabs: Unclaimed and Claimed for everyone. Items
+       never sit in a separate 'pending' state — see the claim workflow in
+       app.js. Staff/admin also get a Removed tab (Wei Qi's soft-delete). -->
   <div class="status-tabs">
     <a href="/items?status=unclaimed&sort=<%= sort %>&dir=<%= dir %>"
        class="tab-link <%= activeStatus === 'unclaimed' ? 'tab-active' : '' %>">

@@ -59,6 +59,11 @@
   </div>
 <%- include('../partials/footer') %>
 
+<!-- Deliberate, single exception to this app's no-client-JS rule (every
+     other feature manages with plain forms/links — e.g. autocomplete uses a
+     native <datalist> instead of JS specifically to avoid this). Justified
+     here because it's a safety confirmation in front of a destructive,
+     irreversible-feeling action (Delete), not app logic. -->
 <script>
 function openDeleteModal(itemId) {
   const modal = document.getElementById('deleteModal');

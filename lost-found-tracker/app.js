@@ -95,7 +95,7 @@ app.use((req, res, next) => {
 
 // ----- Auth guards, used inline as extra arguments on the routes below -----
 //   app.get('/items/new', isLoggedIn, (req, res) => { ... });
-//   app.post('/items/:id/delete', isLoggedIn, isAdmin, (req, res) => { ... });
+//   app.post('/items/:id/delete', isLoggedIn, isStaffOrAdmin, (req, res) => { ... });
 function isLoggedIn(req, res, next) {
   if (req.session && req.session.user) {
     return next();
@@ -592,6 +592,7 @@ app.get('/items', isLoggedIn, (req, res) => {
         sort: sortColumn,
         dir: sortDirection.toLowerCase(),
         activeStatus,
+        success: req.query.success || null,
       });
     });
   });
@@ -886,11 +887,18 @@ app.get('/items/:id/history', isLoggedIn, (req, res) => {
 });
 
 // ===================================================================
-// Wei Qi — Remove Item (Delete)
-// This is the one route that needs isAdmin, not just isLoggedIn.
+// Wei Qi — Remove Item (Delete) + Restore
+// Staff or admin can remove an item and bring it back — not admin-only.
 // ===================================================================
 
-// POST /items/:id/delete — staff-only removal
+// POST /items/:id/delete — staff/admin removal, requires typing "delete" to
+// confirm (views/items/show.ejs's modal) since this is destructive-feeling.
+// Soft-delete (flip status) rather than a hard DELETE — items can have
+// claims referencing them (claims.item_id FOREIGN KEY), so an actual DELETE
+// would fail once a claim exists. Updating status keeps the row (and its
+// claim history) intact and just hides it from the default browse list
+// (see the status allowlist in GET /items above) — reversible via Restore
+// below, unlike a real DELETE.
 app.post('/items/:id/delete', isLoggedIn, isStaffOrAdmin, (req, res) => {
   const { confirmText } = req.body;
 
