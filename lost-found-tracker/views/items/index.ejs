@@ -3,7 +3,15 @@
 <div class="browse-hero">
   <div class="browse-hero-inner">
     <h1 class="browse-title">Found Items</h1>
-    <a href="/items/search" class="btn btn-outline">Search &amp; Filter &rarr;</a>
+    <!-- Quick keyword search right here on Browse — posts straight into
+         Jun Hao's GET /items/search with just `q`, no filters. The full
+         Search & Filter page (category/status/date range) is still one
+         click away for anyone who needs those. -->
+    <form class="quick-search" action="/items/search" method="GET">
+      <input type="text" name="q" placeholder="Search items...">
+      <button type="submit" class="btn btn-outline">Search</button>
+    </form>
+    <a href="/items/search" class="btn btn-outline">Advanced &amp; Filter &rarr;</a>
   </div>
 </div>
 
