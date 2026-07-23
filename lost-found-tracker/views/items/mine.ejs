@@ -1,0 +1,53 @@
+<%- include('../partials/header') %>
+
+<!-- Shernice — Report a Found Item (Create): the reporter-facing side.
+     Shows the logged-in user every item they've reported and its current
+     status. Read-only list, but each row's Edit link uses the same
+     reported_by === user.user_id rule as show.ejs/canEditItem, so this also
+     doubles as the easiest way to find something you reported to fix a typo. -->
+<div class="browse-hero">
+  <div class="browse-hero-inner">
+    <h1 class="browse-title">My Reports</h1>
+    <a href="/items/new" class="btn btn-outline">+ Report a found item</a>
+  </div>
+</div>
+
+<div class="container">
+
+  <% if (items.length === 0) { %>
+    <div class="empty-state">
+      <p>You haven't reported any items yet.</p>
+      <p style="font-size:0.85rem; margin-top:0.5rem;">
+        Found something lying around? <a href="/items/new">Report a found item &rarr;</a>
+      </p>
+    </div>
+  <% } else { %>
+
+    <ul class="item-list">
+      <% items.forEach(item => { %>
+        <li class="item-card">
+          <% if (item.image) { %>
+            <img src="/images/<%= item.image %>" alt="<%= item.item_name %>" class="item-thumb">
+          <% } else { %>
+            <div class="item-thumb item-thumb-placeholder">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+              </svg>
+            </div>
+          <% } %>
+          <div class="item-info">
+            <div class="item-name"><%= item.item_name %></div>
+            <div class="item-meta"><%= item.category %> &middot; <%= item.location_found %> &middot; <%= item.date_found %></div>
+          </div>
+          <span class="status-badge status-<%= item.status %>"><%= item.status %></span>
+          <a href="/items/<%= item.item_id %>" class="btn btn-sm">View</a>
+          <a href="/items/<%= item.item_id %>/edit" class="btn btn-sm">Edit</a>
+        </li>
+      <% }) %>
+    </ul>
+
+  <% } %>
+
+</div>
+
+<%- include('../partials/footer') %>

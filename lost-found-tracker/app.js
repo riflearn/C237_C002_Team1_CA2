@@ -529,6 +529,27 @@ app.post('/items/new', isLoggedIn, imageUpload.single('image'), (req, res) => {
   );
 });
 
+// GET /items/mine — every item the logged-in user has reported, and its
+// current status. The student-facing (well, reporter-facing) counterpart to
+// My Claims below — without this, once you've reported a few items there's
+// no way to find them again except stumbling across them in Browse/Search.
+// Also doubles as the natural way in to editing your own report (see
+// canEditItem in Soe San's section) instead of hunting for it first.
+// Declared before GET /items/:id so Express doesn't treat "mine" as an item ID.
+app.get('/items/mine', isLoggedIn, (req, res) => {
+  // Scoped to the logged-in user's own reports via reported_by — never a
+  // value from the URL — so nobody can view someone else's report list.
+  const sql = 'SELECT * FROM items WHERE reported_by = ? ORDER BY created_at DESC';
+
+  connection.query(sql, [req.session.user.user_id], (error, results) => {
+    if (error) {
+      console.error('Database query error:', error.message);
+      return res.status(500).send('Something went wrong. Please try again.');
+    }
+    res.render('items/mine', { items: results });
+  });
+});
+
 // ===================================================================
 // Hui Xing — Browse & View Items (Read)
 // + Pagination & Sorting
