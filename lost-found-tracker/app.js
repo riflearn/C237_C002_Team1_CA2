@@ -861,20 +861,33 @@ app.get('/items/:id/history', isLoggedIn, isStaffOrAdmin, (req, res) => {
 // ===================================================================
 
 // POST /items/:id/delete — staff-only removal
-app.post('/items/:id/delete', isLoggedIn, isAdmin, (req, res) => {
-  // Soft-delete (flip status) instead of a hard DELETE — items can have
-  // claims referencing them (claims.item_id FOREIGN KEY), so an actual
-  // DELETE would fail once a claim exists. Updating status keeps the row
-  // (and its claim history) intact and just hides it from the default
-  // browse list (see the "!= 'removed'" filter in GET /items above).
-  const sql = 'UPDATE items SET status = ? WHERE item_id = ?';
+app.post('/items/:id/delete', isLoggedIn, isStaffOrAdmin, (req, res) => {
+  const { confirmText } = req.body;
 
+  if (confirmText !== 'delete') {
+    // If staff didn’t type delete correctly, reject
+    return res.status(400).send('You must type "delete" to confirm removal.');
+  }
+
+  const sql = 'UPDATE items SET status = ? WHERE item_id = ?';
   connection.query(sql, ['removed', req.params.id], (error) => {
     if (error) {
       console.error('Database query error:', error.message);
       return res.status(500).send('Something went wrong. Please try again.');
     }
     res.redirect('/items');
+  });
+});
+
+// POST /items/:id/restore — undo remove (reactivate item)
+app.post('/items/:id/restore', isLoggedIn, isStaffOrAdmin, (req, res) => {
+  const sql = 'UPDATE items SET status = ? WHERE item_id = ?';
+  connection.query(sql, ['unclaimed', req.params.id], (error) => {
+    if (error) {
+      console.error('Database query error:', error.message);
+      return res.status(500).send('Something went wrong. Please try again.');
+    }
+    res.redirect('/items?success=restored');
   });
 });
 
