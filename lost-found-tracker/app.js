@@ -490,13 +490,14 @@ app.post('/admin/users/:id/reactivate', isLoggedIn, isAdmin, (req, res) => {
 // + Image Upload (attach a photo when reporting an item)
 // ===================================================================
 
-// GET /items/new — show the "report a found item" form
-app.get('/items/new', isLoggedIn, isStaffOrAdmin, (req, res) => {
+// GET /items/new — show the "report a found item" form. Any logged-in
+// user can report an item — student, staff, or admin.
+app.get('/items/new', isLoggedIn, (req, res) => {
   res.render('items/new', { error: null });
 });
 
 // POST /items/new — insert the new item into the database
-app.post('/items/new', isLoggedIn, isStaffOrAdmin, imageUpload.single('image'), (req, res) => {
+app.post('/items/new', isLoggedIn, imageUpload.single('image'), (req, res) => {
   const { item_name, category, description, location_found, date_found } = req.body;
 
   // description is optional (its textarea has no `required`); everything
@@ -737,8 +738,17 @@ app.get('/items/:id', isLoggedIn, (req, res) => {
 // + Edit History / Audit Log
 // ===================================================================
 
+// Who's allowed to edit an item: staff/admin (any item), or the student who
+// originally reported it — their own item only, e.g. to fix a typo. This
+// depends on the item itself (item.reported_by), not just the user's role,
+// so it's a plain helper called inside the routes below rather than route
+// middleware like isAdmin/isStaffOrAdmin.
+function canEditItem(user, item) {
+  return user.role === 'staff' || user.role === 'admin' || item.reported_by === user.user_id;
+}
+
 // GET /items/:id/edit — show the edit form, pre-filled with current data
-app.get('/items/:id/edit', isLoggedIn, isStaffOrAdmin, (req, res) => {
+app.get('/items/:id/edit', isLoggedIn, (req, res) => {
   const sql = 'SELECT * FROM items WHERE item_id = ?';
 
   connection.query(sql, [req.params.id], (error, results) => {
@@ -749,45 +759,44 @@ app.get('/items/:id/edit', isLoggedIn, isStaffOrAdmin, (req, res) => {
     if (results.length === 0) {
       return res.status(404).send('Item not found.');
     }
+    if (!canEditItem(req.session.user, results[0])) {
+      return res.status(403).render('403', {});
+    }
     res.render('items/edit', { item: results[0], error: null });
   });
 });
 
 // POST /items/:id/edit — save the changes
-app.post('/items/:id/edit', isLoggedIn, isStaffOrAdmin, (req, res) => {
+app.post('/items/:id/edit', isLoggedIn, (req, res) => {
   const { item_name, category, description, location_found, date_found } = req.body;
   const itemId = req.params.id;
 
-  // Same required-field set as Shernice's create form.
-  if (!item_name || !category || !location_found || !date_found) {
-    // Re-fetch the item so the form can re-render pre-filled instead of
-    // losing the other fields the user already typed.
-    const fetchSql = 'SELECT * FROM items WHERE item_id = ?';
-    return connection.query(fetchSql, [itemId], (fetchErr, results) => {
-      if (fetchErr) {
-        console.error('Database query error:', fetchErr.message);
-        return res.status(500).send('Something went wrong. Please try again.');
-      }
-      res.render('items/edit', {
-        item: { ...results[0], ...req.body, item_id: itemId },
-        error: 'Please fill in all required fields.',
-      });
-    });
-  }
-
-  // Fetch the row as it currently stands before overwriting it — this is
-  // what lets the audit log record what actually changed, not just that
-  // an edit happened.
-  const fetchOldSql = 'SELECT * FROM items WHERE item_id = ?';
-  connection.query(fetchOldSql, [itemId], (fetchOldErr, oldResults) => {
-    if (fetchOldErr) {
-      console.error('Database query error:', fetchOldErr.message);
+  // Fetch the item first — needed both for the edit-permission check below
+  // and, if validation fails, to re-render the form pre-filled with the
+  // item's existing values (previously this ran as two separate fetches;
+  // now the same one covers both).
+  const fetchSql = 'SELECT * FROM items WHERE item_id = ?';
+  connection.query(fetchSql, [itemId], (fetchErr, results) => {
+    if (fetchErr) {
+      console.error('Database query error:', fetchErr.message);
       return res.status(500).send('Something went wrong. Please try again.');
     }
-    if (oldResults.length === 0) {
+    if (results.length === 0) {
       return res.status(404).send('Item not found.');
     }
-    const oldItem = oldResults[0];
+    const oldItem = results[0];
+
+    if (!canEditItem(req.session.user, oldItem)) {
+      return res.status(403).render('403', {});
+    }
+
+    // Same required-field set as Shernice's create form.
+    if (!item_name || !category || !location_found || !date_found) {
+      return res.render('items/edit', {
+        item: { ...oldItem, ...req.body, item_id: itemId },
+        error: 'Please fill in all required fields.',
+      });
+    }
 
     const sql = `UPDATE items
         SET item_name = ?, category = ?, description = ?, location_found = ?, date_found = ?
@@ -836,22 +845,39 @@ app.post('/items/:id/edit', isLoggedIn, isStaffOrAdmin, (req, res) => {
   });
 });
 
-// GET /items/:id/history — view the edit history for an item
-app.get('/items/:id/history', isLoggedIn, isStaffOrAdmin, (req, res) => {
-  // JOIN against users so the log shows who made each edit, not just a
-  // numeric user_id.
-  const sql = `SELECT l.log_id, l.changes_summary, l.changed_at, u.username AS edited_by_username
-      FROM item_edit_log l
-      JOIN users u ON l.edited_by = u.user_id
-      WHERE l.item_id = ?
-      ORDER BY l.changed_at DESC`;
+// GET /items/:id/history — view the edit history for an item. Same access
+// rule as the edit form itself: staff/admin, or whoever reported this item.
+app.get('/items/:id/history', isLoggedIn, (req, res) => {
+  const itemId = req.params.id;
 
-  connection.query(sql, [req.params.id], (error, results) => {
-    if (error) {
-      console.error('Database query error:', error.message);
+  const itemSql = 'SELECT reported_by FROM items WHERE item_id = ?';
+  connection.query(itemSql, [itemId], (itemErr, itemResults) => {
+    if (itemErr) {
+      console.error('Database query error:', itemErr.message);
       return res.status(500).send('Something went wrong. Please try again.');
     }
-    res.render('items/history', { history: results, itemId: req.params.id });
+    if (itemResults.length === 0) {
+      return res.status(404).send('Item not found.');
+    }
+    if (!canEditItem(req.session.user, itemResults[0])) {
+      return res.status(403).render('403', {});
+    }
+
+    // JOIN against users so the log shows who made each edit, not just a
+    // numeric user_id.
+    const sql = `SELECT l.log_id, l.changes_summary, l.changed_at, u.username AS edited_by_username
+        FROM item_edit_log l
+        JOIN users u ON l.edited_by = u.user_id
+        WHERE l.item_id = ?
+        ORDER BY l.changed_at DESC`;
+
+    connection.query(sql, [itemId], (error, results) => {
+      if (error) {
+        console.error('Database query error:', error.message);
+        return res.status(500).send('Something went wrong. Please try again.');
+      }
+      res.render('items/history', { history: results, itemId });
+    });
   });
 });
 

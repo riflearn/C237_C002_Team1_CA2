@@ -78,7 +78,7 @@
     <% } %>
   </div>
 
-  <% if (user && (user.role === 'staff' || user.role === 'admin')) { %>
+  <% if (user) { %>
     <div style="margin-top: 1.5rem;">
       <a href="/items/new" class="btn">+ Report a found item</a>
     </div>

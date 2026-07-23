@@ -15,7 +15,9 @@
     <p><strong>Location:</strong> <%= item.location_found %></p>
     <p><strong>Date found:</strong> <%= item.date_found %></p>
 
-    <% if (user && (user.role === 'staff' || user.role === 'admin')) { %>
+    <!-- Same rule as app.js's canEditItem: staff/admin can edit any item;
+         a student only sees Edit on the item they themselves reported. -->
+    <% if (user && (user.role === 'staff' || user.role === 'admin' || item.reported_by === user.user_id)) { %>
       <a href="/items/<%= item.item_id %>/edit" class="btn">Edit</a>
     <% } %>
     <% if (user && user.role === 'admin') { %>
