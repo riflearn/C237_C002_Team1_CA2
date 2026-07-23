@@ -26,6 +26,7 @@
     <select name="status">
       <option value="">Any status</option>
       <option value="unclaimed" <%= query.status === 'unclaimed' ? 'selected' : '' %>>Unclaimed</option>
+      <option value="pending" <%= query.status === 'pending' ? 'selected' : '' %>>Pending Collection</option>
       <option value="claimed" <%= query.status === 'claimed' ? 'selected' : '' %>>Claimed</option>
       <option value="removed" <%= query.status === 'removed' ? 'selected' : '' %>>Removed</option>
     </select>

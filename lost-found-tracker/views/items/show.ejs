@@ -27,11 +27,22 @@
         <form action="/items/<%= item.item_id %>/restore" method="POST" style="display:inline;">
           <button type="submit" class="btn btn-secondary">Restore</button>
         </form>
-      <% } else if (item.status !== 'claimed') { %>
-        <!-- Delete button triggers modal -->
+      <% } else if (item.status !== 'claimed' && item.status !== 'pending') { %>
+        <!-- Delete button triggers modal — not offered on 'pending' items
+             either, same reasoning as 'claimed': it's already resolved
+             (owner confirmed), just waiting on physical pickup. -->
         <button type="button" class="btn btn-danger" onclick="openDeleteModal('<%= item.item_id %>')">
           Delete
         </button>
+      <% } %>
+      <% if (item.status === 'pending') { %>
+        <!-- Wei Qi — Claim Verification Workflow: the owner has been
+             confirmed (claim approved) but hasn't physically picked the
+             item up from the hub yet. This is the step that finally moves
+             it to 'claimed'. -->
+        <form action="/items/<%= item.item_id %>/collect" method="POST" style="display:inline;">
+          <button type="submit" class="btn">Mark as collected</button>
+        </form>
       <% } %>
     <% } %>
 

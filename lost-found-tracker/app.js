@@ -563,11 +563,11 @@ app.get('/items', isLoggedIn, (req, res) => {
   const sortColumn = allowedSortColumns.includes(req.query.sort) ? req.query.sort : 'created_at';
   const sortDirection = req.query.dir === 'asc' ? 'ASC' : 'DESC';
 
-  // Status tab: 'unclaimed' | 'claimed' — defaults to 'unclaimed'. Items only
-  // ever hold one of these two states (never a separate 'pending'), so those
-  // are the only two tabs. Validated against an allowlist for the same reason
-  // as sortColumn.
-  const allowedStatuses = ['unclaimed', 'claimed', 'removed'];
+  // Status tab: 'unclaimed' | 'pending' | 'claimed' — defaults to 'unclaimed'.
+  // 'pending' here means "claim approved, not yet collected from the hub" —
+  // set by POST /claims/:id/review and cleared by POST /items/:id/collect.
+  // Validated against an allowlist for the same reason as sortColumn.
+  const allowedStatuses = ['unclaimed', 'pending', 'claimed', 'removed'];
   let activeStatus = allowedStatuses.includes(req.query.status) ? req.query.status : 'unclaimed';
 
     // If user is not staff/admin, prevent them from accessing removed items
@@ -1211,13 +1211,18 @@ app.post('/claims/:id/review', isLoggedIn, isStaffOrAdmin, (req, res) => {
         return res.status(500).send('Something went wrong. Please try again.');
       }
 
-      // Approving hands the item to the claimant for good; rejecting
-      // leaves it open so other claimants' submissions stay active.
-      // Only flip status to 'claimed' on approval — rejection just
-      // marks this one claim as rejected, item stays 'unclaimed'.
+      // Approving confirms ownership but doesn't mean the item has actually
+      // been picked up from the lost & found hub yet — those are two
+      // different real-world events. So approval moves the item to
+      // 'pending' (repurposed here to mean "approved, awaiting collection",
+      // not its old pre-multi-claim meaning of "claim awaiting review" —
+      // that state doesn't exist anymore, see GET /items below). Staff mark
+      // it fully 'claimed' only once the owner actually collects it, via
+      // POST /items/:id/collect further down. Rejecting just leaves the
+      // item 'unclaimed' so other claimants' submissions stay active.
       if (decision === 'approved') {
         const updateItemSql = 'UPDATE items SET status = ? WHERE item_id = ?';
-        connection.query(updateItemSql, ['claimed', claim.item_id], (updateItemErr) => {
+        connection.query(updateItemSql, ['pending', claim.item_id], (updateItemErr) => {
           if (updateItemErr) {
             console.error('Database query error:', updateItemErr.message);
             return res.status(500).send('Something went wrong. Please try again.');
@@ -1237,6 +1242,37 @@ app.post('/claims/:id/review', isLoggedIn, isStaffOrAdmin, (req, res) => {
         // Rejection: item stays unclaimed, other claims stay open.
         res.redirect('/claims/item/' + claim.item_id);
       }
+    });
+  });
+});
+
+// POST /items/:id/collect — staff/admin confirms the owner has actually
+// picked up the item from the hub. Only valid from 'pending' (approved,
+// awaiting collection) — an unclaimed or already-claimed item has nothing
+// to collect, so this is a no-op redirect rather than an error for those.
+app.post('/items/:id/collect', isLoggedIn, isStaffOrAdmin, (req, res) => {
+  const itemId = req.params.id;
+
+  const fetchSql = 'SELECT status FROM items WHERE item_id = ?';
+  connection.query(fetchSql, [itemId], (fetchErr, results) => {
+    if (fetchErr) {
+      console.error('Database query error:', fetchErr.message);
+      return res.status(500).send('Something went wrong. Please try again.');
+    }
+    if (results.length === 0) {
+      return res.status(404).send('Item not found.');
+    }
+    if (results[0].status !== 'pending') {
+      return res.redirect('/items/' + itemId);
+    }
+
+    const sql = 'UPDATE items SET status = ? WHERE item_id = ?';
+    connection.query(sql, ['claimed', itemId], (error) => {
+      if (error) {
+        console.error('Database query error:', error.message);
+        return res.status(500).send('Something went wrong. Please try again.');
+      }
+      res.redirect('/items/' + itemId);
     });
   });
 });

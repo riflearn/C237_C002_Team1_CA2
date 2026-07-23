@@ -40,13 +40,17 @@
     <button type="submit" class="btn">Search</button>
   </form>
 
-  <!-- Hui Xing — Status tabs: Unclaimed and Claimed for everyone. Items
-       never sit in a separate 'pending' state — see the claim workflow in
-       app.js. Staff/admin also get a Removed tab (Wei Qi's soft-delete). -->
+  <!-- Hui Xing — Status tabs: Unclaimed, Pending Collection (Wei Qi's
+       claim-approved-but-not-collected state), and Claimed, for everyone.
+       Staff/admin also get a Removed tab (Wei Qi's soft-delete). -->
   <div class="status-tabs">
     <a href="/items?status=unclaimed&sort=<%= sort %>&dir=<%= dir %>"
        class="tab-link <%= activeStatus === 'unclaimed' ? 'tab-active' : '' %>">
       Unclaimed
+    </a>
+    <a href="/items?status=pending&sort=<%= sort %>&dir=<%= dir %>"
+       class="tab-link <%= activeStatus === 'pending' ? 'tab-active' : '' %>">
+      Pending Collection
     </a>
     <a href="/items?status=claimed&sort=<%= sort %>&dir=<%= dir %>"
        class="tab-link <%= activeStatus === 'claimed' ? 'tab-active' : '' %>">
