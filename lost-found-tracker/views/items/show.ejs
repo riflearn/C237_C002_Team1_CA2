@@ -14,6 +14,7 @@
     <p><%= item.description %></p>
     <p><strong>Location:</strong> <%= item.location_found %></p>
     <p><strong>Date found:</strong> <%= item.date_found %></p>
+    <p><strong>Reported by:</strong> <%= item.reported_by_username %></p>
 
     <!-- Same rule as app.js's canEditItem: staff/admin can edit any item;
          a student only sees Edit on the item they themselves reported. -->

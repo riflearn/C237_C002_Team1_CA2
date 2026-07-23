@@ -598,8 +598,15 @@ app.get('/items', isLoggedIn, (req, res) => {
     const totalItems = countResults[0].total;
     const totalPages = Math.max(Math.ceil(totalItems / perPage), 1);
 
-    const sql = `SELECT * FROM items WHERE status = ? AND date_found >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-      ORDER BY ${sortColumn} ${sortDirection} LIMIT ? OFFSET ?`;
+    // JOIN users so the list can show who reported each item — otherwise
+    // the Edit button that sometimes appears (see canEditItem) has no
+    // visible explanation for why it's there on this item and not others.
+    // sortColumn needs the `i.` prefix now — users has its own created_at,
+    // so an unqualified ORDER BY created_at would be ambiguous once joined.
+    const sql = `SELECT i.*, u.username AS reported_by_username
+      FROM items i JOIN users u ON i.reported_by = u.user_id
+      WHERE i.status = ? AND i.date_found >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+      ORDER BY i.${sortColumn} ${sortDirection} LIMIT ? OFFSET ?`;
 
     connection.query(sql, [activeStatus, perPage, offset], (error, results) => {
       if (error) {
@@ -731,7 +738,10 @@ app.get('/items/search', isLoggedIn, (req, res) => {
 
 // GET /items/:id — view a single item's detail
 app.get('/items/:id', isLoggedIn, (req, res) => {
-  const sql = 'SELECT * FROM items WHERE item_id = ?';
+  // JOIN users so the detail page can show who reported it.
+  const sql = `SELECT i.*, u.username AS reported_by_username
+    FROM items i JOIN users u ON i.reported_by = u.user_id
+    WHERE i.item_id = ?`;
 
   connection.query(sql, [req.params.id], (error, results) => {
     if (error) {
