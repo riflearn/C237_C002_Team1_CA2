@@ -17,7 +17,7 @@
       <p class="error"><%= error %></p>
     <% } %>
 
-    <form action="/items/<%= item.item_id %>/edit" method="POST">
+    <form action="/items/<%= item.item_id %>/edit" method="POST" enctype="multipart/form-data">
       <label for="item_name">Item name</label>
       <input type="text" id="item_name" name="item_name" value="<%= item.item_name %>" required>
 
@@ -40,6 +40,17 @@
 
       <label for="date_found">Date found</label>
       <input type="date" id="date_found" name="date_found" value="<%= item.date_found %>" required>
+
+      <!-- Soe San — reusing Shernice's imageUpload multer config (same
+           instance, not a duplicate) since editing an item's photo is just
+           one more editable field on this form, not a separate feature.
+           Optional: leave blank to keep the current photo. -->
+      <label for="image">Photo</label>
+      <% if (item.image) { %>
+        <img src="/images/<%= item.image %>" alt="Current photo" style="max-width:160px; border-radius:var(--radius); margin-bottom:0.5rem;">
+      <% } %>
+      <input type="file" id="image" name="image" accept="image/*">
+      <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Leave blank to keep the current photo.</p>
 
       <button type="submit" class="btn">Save changes</button>
     </form>

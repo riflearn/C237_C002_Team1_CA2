@@ -796,7 +796,10 @@ app.get('/items/:id/edit', isLoggedIn, (req, res) => {
 });
 
 // POST /items/:id/edit — save the changes
-app.post('/items/:id/edit', isLoggedIn, (req, res) => {
+// imageUpload.single('image') is Shernice's multer config, reused as-is (not
+// duplicated) — replacing the photo is just one more optional field on this
+// form, not a separate feature.
+app.post('/items/:id/edit', isLoggedIn, imageUpload.single('image'), (req, res) => {
   const { item_name, category, description, location_found, date_found } = req.body;
   const itemId = req.params.id;
 
@@ -827,13 +830,18 @@ app.post('/items/:id/edit', isLoggedIn, (req, res) => {
       });
     }
 
+    // A new photo is optional — keep the existing one if none was uploaded
+    // this time, same "leave blank to keep it" pattern as the profile's
+    // optional password change.
+    const image = req.file ? req.file.filename : oldItem.image;
+
     const sql = `UPDATE items
-        SET item_name = ?, category = ?, description = ?, location_found = ?, date_found = ?
+        SET item_name = ?, category = ?, description = ?, location_found = ?, date_found = ?, image = ?
       WHERE item_id = ?`;
 
     connection.query(
       sql,
-      [item_name, category, description || null, location_found, date_found, itemId],
+      [item_name, category, description || null, location_found, date_found, image, itemId],
       (error) => {
         if (error) {
           console.error('Database query error:', error.message);
@@ -857,6 +865,9 @@ app.post('/items/:id/edit', isLoggedIn, (req, res) => {
         }
         if (oldItem.date_found !== date_found) {
           changedFields.push(`date_found: '${oldItem.date_found}' -> '${date_found}'`);
+        }
+        if (oldItem.image !== image) {
+          changedFields.push('photo changed');
         }
         const changesSummary = changedFields.length > 0 ? changedFields.join('; ') : 'No fields changed';
 
