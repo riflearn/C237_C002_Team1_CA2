@@ -20,10 +20,18 @@
     <% if (user && (user.role === 'staff' || user.role === 'admin' || item.reported_by === user.user_id)) { %>
       <a href="/items/<%= item.item_id %>/edit" class="btn">Edit</a>
     <% } %>
-    <% if (user && user.role === 'admin') { %>
-      <form action="/items/<%= item.item_id %>/delete" method="POST" style="display:inline;">
-        <button type="submit" class="btn btn-danger">Delete</button>
-      </form>
+    <% if (user && (user.role === 'staff' || user.role === 'admin')) { %>
+      <% if (item.status === 'removed') { %>
+        <!-- Restore button -->
+        <form action="/items/<%= item.item_id %>/restore" method="POST" style="display:inline;">
+          <button type="submit" class="btn btn-secondary">Restore</button>
+        </form>
+      <% } else if (item.status !== 'claimed') { %>
+        <!-- Delete button triggers modal -->
+        <button type="button" class="btn btn-danger" onclick="openDeleteModal('<%= item.item_id %>')">
+          Delete
+        </button>
+      <% } %>
     <% } %>
 
     <% if (user && user.role === 'student' && item.status === 'unclaimed') { %>
@@ -34,4 +42,61 @@
       <% } %>
     <% } %>
   </div>
+
+<!-- Delete confirmation modal -->
+  <div id="deleteModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <h3>Confirm Delete</h3>
+      <p>Type <strong class="delete-text">delete</strong> to confirm removal: <%= item.item_name %></p>
+      <form id="deleteForm" method="POST">
+        <input type="text" name="confirmText" placeholder="Type delete here" required>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-danger">Delete</button>
+          <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
 <%- include('../partials/footer') %>
+
+<script>
+function openDeleteModal(itemId) {
+  const modal = document.getElementById('deleteModal');
+  const form = document.getElementById('deleteForm');
+  form.action = `/items/${itemId}/delete`; // set correct action
+  modal.style.display = 'flex';
+}
+function closeDeleteModal() {
+  document.getElementById('deleteModal').style.display = 'none';
+}
+</script>
+
+<style>
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px; /* wider box */
+  text-align: center;
+}
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+.modal-actions .btn {
+  flex: 1;
+  margin: 0 5px;
+}
+.delete-text {
+  color: red;
+  font-weight: bold;
+}
+</style>

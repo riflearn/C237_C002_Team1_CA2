@@ -21,6 +21,12 @@
        class="tab-link <%= activeStatus === 'claimed' ? 'tab-active' : '' %>">
       Claimed
     </a>
+    <% if (user && (user.role === 'staff' || user.role === 'admin')) { %>
+      <a href="/items?status=removed"
+        class="tab-link <%= activeStatus === 'removed' ? 'tab-active' : '' %>">
+        Removed
+      </a>
+    <% } %>
   </div>
 
   <!-- Hui Xing — Sort buttons: active sort is highlighted, resets page to 1 -->
