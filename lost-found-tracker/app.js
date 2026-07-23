@@ -1101,6 +1101,81 @@ app.get('/claims/mine', isLoggedIn, (req, res) => {
   });
 });
 
+// GET /claims/:id/edit — let a claimant correct their own claim (typo in the
+// description, or attach/replace the photo) — but only while it's still
+// 'pending'. Once staff have approved or rejected it, the decision's
+// already made, so editing afterward doesn't make sense. Unlike editing an
+// item, this is NOT staff/admin-overridable — a claim is the claimant's own
+// testimony, not a shared record, so only they can touch it.
+app.get('/claims/:id/edit', isLoggedIn, (req, res) => {
+  const claimId = req.params.id;
+  const sql = 'SELECT * FROM claims WHERE claim_id = ?';
+
+  connection.query(sql, [claimId], (error, results) => {
+    if (error) {
+      console.error('Database query error:', error.message);
+      return res.status(500).send('Something went wrong. Please try again.');
+    }
+    if (results.length === 0) {
+      return res.status(404).send('Claim not found.');
+    }
+    const claim = results[0];
+    if (claim.claimed_by !== req.session.user.user_id) {
+      return res.status(403).render('403', {});
+    }
+    if (claim.claim_status !== 'pending') {
+      // Already reviewed — nothing left to edit. Send them back to My Claims.
+      return res.redirect('/claims/mine');
+    }
+    res.render('claims/edit', { claim, error: null });
+  });
+});
+
+// POST /claims/:id/edit — save the changes
+app.post('/claims/:id/edit', isLoggedIn, imageUpload.single('image'), (req, res) => {
+  const { proof_description } = req.body;
+  const claimId = req.params.id;
+
+  const fetchSql = 'SELECT * FROM claims WHERE claim_id = ?';
+  connection.query(fetchSql, [claimId], (fetchErr, results) => {
+    if (fetchErr) {
+      console.error('Database query error:', fetchErr.message);
+      return res.status(500).send('Something went wrong. Please try again.');
+    }
+    if (results.length === 0) {
+      return res.status(404).send('Claim not found.');
+    }
+    const claim = results[0];
+    if (claim.claimed_by !== req.session.user.user_id) {
+      return res.status(403).render('403', {});
+    }
+    if (claim.claim_status !== 'pending') {
+      return res.redirect('/claims/mine');
+    }
+
+    if (!proof_description) {
+      return res.render('claims/edit', {
+        claim: { ...claim, proof_description },
+        error: 'Please describe something about the item before saving.',
+      });
+    }
+
+    // Photo is optional — keep the existing one if no new file was
+    // uploaded this time, same "leave blank to keep it" pattern used
+    // everywhere else a photo can be replaced.
+    const proofImage = req.file ? req.file.filename : claim.proof_image;
+
+    const sql = 'UPDATE claims SET proof_description = ?, proof_image = ? WHERE claim_id = ?';
+    connection.query(sql, [proof_description, proofImage, claimId], (error) => {
+      if (error) {
+        console.error('Database query error:', error.message);
+        return res.status(500).send('Something went wrong. Please try again.');
+      }
+      res.redirect('/claims/mine');
+    });
+  });
+});
+
 // GET /claims — staff view: browse pending claims grouped by category.
 app.get('/claims', isLoggedIn, isStaffOrAdmin, (req, res) => {
   const activeCategory = req.query.category || null;

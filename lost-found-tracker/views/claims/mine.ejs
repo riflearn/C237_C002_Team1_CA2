@@ -53,6 +53,11 @@
             <span class="status-badge status-pending">pending</span>
           <% } %>
           <a href="/items/<%= claim.item_id %>" class="btn btn-sm">View</a>
+          <% if (claim.claim_status === 'pending') { %>
+            <!-- Only editable before staff have reviewed it — see the
+                 guard in app.js's GET /claims/:id/edit. -->
+            <a href="/claims/<%= claim.claim_id %>/edit" class="btn btn-sm">Edit</a>
+          <% } %>
         </li>
       <% }) %>
     </ul>

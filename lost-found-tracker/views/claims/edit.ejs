@@ -1,0 +1,24 @@
+<%- include('../partials/header') %>
+  <!-- Wei Qi — Claim Verification Workflow: lets the claimant fix their own
+       claim (typo, or add/replace the photo) while it's still pending. Not
+       staff/admin-overridable — see the guard in app.js's GET /claims/:id/edit. -->
+  <div class="card">
+    <h1>Edit your claim</h1>
+    <% if (error) { %>
+      <p class="error"><%= error %></p>
+    <% } %>
+    <form action="/claims/<%= claim.claim_id %>/edit" method="POST" enctype="multipart/form-data">
+      <label for="proof_description">Describe something only the owner would know (e.g. a mark, contents, sticker)</label>
+      <textarea id="proof_description" name="proof_description" rows="3" required><%= claim.proof_description %></textarea>
+
+      <label for="image">Photo of you with the item</label>
+      <% if (claim.proof_image) { %>
+        <img src="/images/<%= claim.proof_image %>" alt="Current claim photo" style="max-width:160px; border-radius:var(--radius); margin-bottom:0.5rem;">
+      <% } %>
+      <input type="file" id="image" name="image" accept="image/*">
+      <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Leave blank to keep the current photo (if any).</p>
+
+      <button type="submit" class="btn">Save changes</button>
+    </form>
+  </div>
+<%- include('../partials/footer') %>
