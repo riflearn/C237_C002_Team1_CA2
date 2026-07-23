@@ -11,8 +11,9 @@
     <div>
       <span class="brand">Lost &amp; Found Tracker</span>
       <% if (user) { %>
+        <!-- No separate "Search" link — the search/filter bar is right on
+             the Items page now (views/items/index.ejs), not a click away. -->
         <a href="/items">Items</a>
-        <a href="/items/search">Search</a>
         <!-- Shown to everyone, not just students — reporting an item is
              open to any logged-in user (see POST /items/new in app.js). -->
         <a href="/items/mine">My Reports</a>

@@ -3,15 +3,6 @@
 <div class="browse-hero">
   <div class="browse-hero-inner">
     <h1 class="browse-title">Found Items</h1>
-    <!-- Quick keyword search right here on Browse — posts straight into
-         Jun Hao's GET /items/search with just `q`, no filters. The full
-         Search & Filter page (category/status/date range) is still one
-         click away for anyone who needs those. -->
-    <form class="quick-search" action="/items/search" method="GET">
-      <input type="text" name="q" placeholder="Search items...">
-      <button type="submit" class="btn btn-outline">Search</button>
-    </form>
-    <a href="/items/search" class="btn btn-outline">Advanced &amp; Filter &rarr;</a>
   </div>
 </div>
 
@@ -19,6 +10,35 @@
   <% if (success === 'restored') { %>
     <p class="success">Item restored — it's back to Unclaimed.</p>
   <% } %>
+
+  <!-- Search bar, right here on Browse instead of behind a separate page —
+       submits straight into Jun Hao's existing GET /items/search with the
+       same field names her Search page form uses, so her route/query logic
+       is completely untouched; this is a view-only addition. Two fields are
+       deliberately left out of this copy: the status filter (Browse's tabs
+       above already filter by status — showing both here would just be a
+       second, redundant status control) and the autocomplete <datalist>
+       (its item-name list is a query Jun Hao's route runs for her page;
+       duplicating it here would mean querying her data from Hui Xing's
+       route, which we're avoiding). Both remain exactly as they were on the
+       dedicated Search page once you land there with real results. -->
+  <form class="filters" action="/items/search" method="GET">
+    <input type="text" name="q" placeholder="Search items...">
+    <select name="category">
+      <option value="">All categories</option>
+      <option>Electronics</option>
+      <option>Clothing</option>
+      <option>Documents</option>
+      <option>Accessories</option>
+      <option>Bags</option>
+      <option>Others</option>
+    </select>
+    <label style="font-size:0.85rem; color:var(--text-muted); align-self:center; margin:0;">From</label>
+    <input type="date" name="date_from" style="width:auto;">
+    <label style="font-size:0.85rem; color:var(--text-muted); align-self:center; margin:0;">To</label>
+    <input type="date" name="date_to" style="width:auto;">
+    <button type="submit" class="btn">Search</button>
+  </form>
 
   <!-- Hui Xing — Status tabs: Unclaimed and Claimed for everyone. Items
        never sit in a separate 'pending' state — see the claim workflow in

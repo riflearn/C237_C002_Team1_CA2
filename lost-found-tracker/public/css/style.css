@@ -224,22 +224,6 @@ footer {
   font-weight: 700;
 }
 
-/* Quick search box in the Browse hero — a text-only shortcut into Jun Hao's
-   /items/search (just the `q` param, no filters). Doesn't replace the
-   Search & Filter page, just saves a click for a plain keyword search
-   instead of making that a whole separate page you have to navigate to. */
-.quick-search {
-  display: flex;
-  flex-direction: row;
-  gap: 0.5rem;
-  margin: 0;
-  max-width: 320px;
-  flex: 1;
-}
-.quick-search input {
-  width: 100%;
-}
-
 /* Status tabs */
 .status-tabs {
   display: flex;
