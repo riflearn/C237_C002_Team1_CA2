@@ -27,6 +27,7 @@
       <option value="">Any status</option>
       <option value="unclaimed" <%= query.status === 'unclaimed' ? 'selected' : '' %>>Unclaimed</option>
       <option value="claimed" <%= query.status === 'claimed' ? 'selected' : '' %>>Claimed</option>
+      <option value="removed" <%= query.status === 'removed' ? 'selected' : '' %>>Removed</option>
     </select>
 
     <!-- Date range filter on date_found — the main way to reach items
