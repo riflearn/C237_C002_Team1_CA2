@@ -46,6 +46,13 @@
             <span class="claim-review-date"><%= new Date(claim.created_at).toLocaleDateString('en-GB') %></span>
           </div>
           <div class="claim-review-proof">"<%= claim.proof_description %>"</div>
+          <% if (claim.proof_image) { %>
+            <!-- Optional extra evidence the claimant attached, e.g. a photo
+                 of them holding the item — separate from the item's own
+                 photo shown in the card above. -->
+            <img src="/images/<%= claim.proof_image %>" alt="Claim evidence from <%= claim.claimant_username %>"
+                 style="max-width:200px; border-radius:var(--radius); margin:0.5rem 0; display:block;">
+          <% } %>
           <div class="claim-review-actions">
             <form action="/claims/<%= claim.claim_id %>/review" method="POST" style="display:inline;">
               <input type="hidden" name="decision" value="approved">

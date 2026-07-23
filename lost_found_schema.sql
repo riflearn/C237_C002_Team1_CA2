@@ -45,6 +45,7 @@ CREATE TABLE claims (
   item_id             INT NOT NULL,
   claimed_by          INT NOT NULL,
   proof_description   TEXT NOT NULL,
+  proof_image         VARCHAR(255) NULL, -- optional photo submitted with the claim (e.g. claimant holding the item), same upload pattern as items.image
   claim_status        ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
   reviewed_by         INT NULL,
   reviewed_at         TIMESTAMP NULL,

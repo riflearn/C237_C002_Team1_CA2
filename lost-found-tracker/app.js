@@ -1016,7 +1016,11 @@ app.get('/items/:id/claim', isLoggedIn, (req, res) => {
 // flipped to 'pending' here anymore; it stays 'unclaimed' so other users
 // can still see and claim it. Status only changes when staff approve/reject
 // via POST /claims/:id/review below.
-app.post('/items/:id/claim', isLoggedIn, (req, res) => {
+// imageUpload.single('image') is Shernice's multer config, reused as-is —
+// an optional photo (e.g. the claimant holding the item) is extra evidence
+// alongside the required text description, same "optional attachment"
+// pattern already used for reporting and editing an item.
+app.post('/items/:id/claim', isLoggedIn, imageUpload.single('image'), (req, res) => {
   const { proof_description } = req.body;
   const itemId = req.params.id;
 
@@ -1056,9 +1060,11 @@ app.post('/items/:id/claim', isLoggedIn, (req, res) => {
         });
       }
 
-      // claimed_by always comes from the session, never the form.
-      const insertSql = 'INSERT INTO claims (item_id, claimed_by, proof_description) VALUES (?, ?, ?)';
-      connection.query(insertSql, [itemId, req.session.user.user_id, proof_description], (insertErr) => {
+      // claimed_by always comes from the session, never the form. The photo
+      // is optional — req.file only exists if one was actually uploaded.
+      const proofImage = req.file ? req.file.filename : null;
+      const insertSql = 'INSERT INTO claims (item_id, claimed_by, proof_description, proof_image) VALUES (?, ?, ?, ?)';
+      connection.query(insertSql, [itemId, req.session.user.user_id, proof_description, proofImage], (insertErr) => {
         if (insertErr) {
           console.error('Database query error:', insertErr.message);
           return res.status(500).send('Something went wrong. Please try again.');
@@ -1079,7 +1085,7 @@ app.get('/claims/mine', isLoggedIn, (req, res) => {
   // Scoped to the logged-in user's own claims via claimed_by — never a value
   // from the URL, so nobody can read someone else's claims. JOIN items to show
   // what each claim was for.
-  const sql = `SELECT c.claim_id, c.proof_description, c.claim_status, c.created_at,
+  const sql = `SELECT c.claim_id, c.proof_description, c.proof_image, c.claim_status, c.created_at,
         i.item_id, i.item_name, i.category, i.location_found, i.image
       FROM claims c
       JOIN items i ON c.item_id = i.item_id
@@ -1161,7 +1167,7 @@ app.get('/claims/item/:id', isLoggedIn, isStaffOrAdmin, (req, res) => {
       return res.status(404).send('Item not found.');
     }
 
-    const claimsSql = `SELECT c.claim_id, c.proof_description, c.created_at,
+    const claimsSql = `SELECT c.claim_id, c.proof_description, c.proof_image, c.created_at,
           u.username AS claimant_username
         FROM claims c
         JOIN users u ON c.claimed_by = u.user_id

@@ -7,9 +7,16 @@
     <% if (error) { %>
       <p class="error"><%= error %></p>
     <% } %>
-    <form action="/items/<%= item.item_id %>/claim" method="POST">
+    <form action="/items/<%= item.item_id %>/claim" method="POST" enctype="multipart/form-data">
       <label for="proof_description">Describe something only the owner would know (e.g. a mark, contents, sticker)</label>
       <textarea id="proof_description" name="proof_description" rows="3" required></textarea>
+
+      <!-- Optional extra evidence — e.g. a photo of you holding the item.
+           Reuses Shernice's imageUpload multer config, same as reporting
+           and editing an item. The description above is still the required
+           proof; this is additional, not a replacement. -->
+      <label for="image">Photo of you with the item (optional)</label>
+      <input type="file" id="image" name="image" accept="image/*">
 
       <button type="submit" class="btn">Submit claim</button>
     </form>
