@@ -552,9 +552,13 @@ app.get('/items', isLoggedIn, (req, res) => {
   // ever hold one of these two states (never a separate 'pending'), so those
   // are the only two tabs. Validated against an allowlist for the same reason
   // as sortColumn.
-  const allowedStatuses = ['unclaimed', 'claimed'];
-  const activeStatus = allowedStatuses.includes(req.query.status) ? req.query.status : 'unclaimed';
+  const allowedStatuses = ['unclaimed', 'claimed', 'removed'];
+  let activeStatus = allowedStatuses.includes(req.query.status) ? req.query.status : 'unclaimed';
 
+    // If user is not staff/admin, prevent them from accessing removed items
+    if (activeStatus === 'removed' && (!req.session.user || (req.session.user.role !== 'staff' && req.session.user.role !== 'admin'))) {
+      activeStatus = 'unclaimed';
+  }
   const perPage = 5;
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const offset = (page - 1) * perPage;
