@@ -606,14 +606,37 @@ app.get('/items', isLoggedIn, (req, res) => {
         console.error('Database query error:', error.message);
         return res.status(500).send('Something went wrong. Please try again.');
       }
-      res.render('items/index', {
-        items: results,
-        page,
-        totalPages,
-        sort: sortColumn,
-        dir: sortDirection.toLowerCase(),
-        activeStatus,
-        success: req.query.success || null,
+
+      // Autocomplete + Recent Searches (Jun Hao's) — same two queries as her
+      // /items/search route, run here too so the embedded search box on
+      // Browse behaves identically instead of silently doing less.
+      connection.query('SELECT DISTINCT item_name FROM items', (namesErr, namesResults) => {
+        if (namesErr) {
+          console.error('Database query error:', namesErr.message);
+          return res.status(500).send('Something went wrong. Please try again.');
+        }
+        const itemNames = namesResults.map((row) => row.item_name);
+
+        const recentSql = `SELECT search_term, MAX(searched_at) AS last_searched
+          FROM search_history WHERE user_id = ?
+          GROUP BY search_term ORDER BY last_searched DESC LIMIT 5`;
+        connection.query(recentSql, [req.session.user.user_id], (recentErr, recentResults) => {
+          if (recentErr) {
+            console.error('Database query error:', recentErr.message);
+            return res.status(500).send('Something went wrong. Please try again.');
+          }
+          res.render('items/index', {
+            items: results,
+            page,
+            totalPages,
+            sort: sortColumn,
+            dir: sortDirection.toLowerCase(),
+            activeStatus,
+            success: req.query.success || null,
+            itemNames,
+            recentSearches: recentResults.map((row) => row.search_term),
+          });
+        });
       });
     });
   });
