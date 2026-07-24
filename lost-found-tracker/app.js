@@ -43,6 +43,8 @@ const imageUpload = multer({
 // all 6 of us — a hardcoded secret would get committed by whoever's local
 // password happened to be sitting in it. Each teammate keeps their own
 // gitignored .env (copy .env.example → .env, fill in your own local password).
+// Owner: shared infrastructure — every route below queries through this
+// pool, so it isn't any one person's feature.
 const connection = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -75,6 +77,8 @@ connection.getConnection((err, conn) => {
 });
 
 // ----- View engine + core middleware -----
+// Owner: shared infrastructure — request/response plumbing every route
+// relies on, not one person's feature.
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -91,6 +95,7 @@ app.use(session({
 // available in every view without every route having to pass them in
 // manually. Version comes from package.json — the single source of truth,
 // so it can't drift out of sync with what's in the footer.
+// Owner: shared infrastructure, like the header/footer partials it feeds.
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.appVersion = appVersion;
@@ -100,6 +105,10 @@ app.use((req, res, next) => {
 // ----- Auth guards, used inline as extra arguments on the routes below -----
 //   app.get('/items/new', isLoggedIn, (req, res) => { ... });
 //   app.post('/items/:id/delete', isLoggedIn, isStaffOrAdmin, (req, res) => { ... });
+// Owner: shared infrastructure — used across every teammate's routes, not
+// specific to any one feature (isStudent exists to protect Wei Qi's claim
+// routes specifically, but lives here alongside the other role guards it
+// matches in shape).
 function isLoggedIn(req, res, next) {
   if (req.session && req.session.user) {
     return next();
@@ -113,14 +122,25 @@ function isAdmin(req, res, next) {
   }
   // Render a proper styled 403 page instead of raw text, so students
   // who accidentally land on an admin route see something reasonable.
-  return res.status(403).render('403', {});
+  return res.status(403).render('403', { message: 'This page is for admins only.' });
 }
 
 function isStaffOrAdmin(req, res, next) {
   if (req.session && req.session.user && (req.session.user.role === 'staff' || req.session.user.role === 'admin')) {
     return next();
   }
-  return res.status(403).render('403', {});
+  return res.status(403).render('403', { message: 'This page is for staff and admins only.' });
+}
+
+// Claim submission is student-only by design — the "Claim this item" button
+// and the "My Claims" nav link are already hidden for staff/admin in the
+// views, but until now nothing enforced that server-side, so the routes
+// were reachable directly by URL. This closes that gap.
+function isStudent(req, res, next) {
+  if (req.session && req.session.user && req.session.user.role === 'student') {
+    return next();
+  }
+  return res.status(403).render('403', { message: 'Only students can submit a claim.' });
 }
 
 // ===================================================================
@@ -345,10 +365,26 @@ app.post('/profile', isLoggedIn, (req, res) => {
 // their own role or disable themselves — prevents accidental lockout.
 // ===================================================================
 
+// Shared by GET /admin/users and every validation failure in POST
+// /admin/users/create below — includes `status` since views/admin/users.ejs
+// shows a status badge per row.
+const userListSql = 'SELECT user_id, username, email, role, status FROM users ORDER BY role ASC, username ASC';
+
+// Re-fetch the user list and re-render the page with an error — the three
+// validation failures below all did this same thing separately before.
+function renderUsersWithError(res, errorMessage) {
+  connection.query(userListSql, (err, results) => {
+    res.render('admin/users', {
+      users: results || [],
+      success: null,
+      error: errorMessage,
+    });
+  });
+}
+
 // GET /admin/users — list all users with their roles
 app.get('/admin/users', isLoggedIn, isAdmin, (req, res) => {
-  const sql = 'SELECT user_id, username, email, role, status FROM users ORDER BY role ASC, username ASC';
-  connection.query(sql, (error, results) => {
+  connection.query(userListSql, (error, results) => {
     if (error) {
       console.error('Database query error:', error.message);
       return res.status(500).send('Something went wrong. Please try again.');
@@ -361,31 +397,15 @@ app.get('/admin/users', isLoggedIn, isAdmin, (req, res) => {
 app.post('/admin/users/create', isLoggedIn, isAdmin, (req, res) => {
   const { username, email, password, role } = req.body;
 
-  // The user list has to be re-fetched to re-render this page on any error.
-  // Include `status` — views/admin/users.ejs shows a status badge per row.
-  const listSql = 'SELECT user_id, username, email, role, status FROM users ORDER BY role ASC, username ASC';
-
   if (!username || !email || !password || !role) {
-    return connection.query(listSql, (err, results) => {
-      res.render('admin/users', {
-        users: results || [],
-        success: null,
-        error: 'All fields are required.',
-      });
-    });
+    return renderUsersWithError(res, 'All fields are required.');
   }
 
   // Password strength check (see checkPassword above) — same rule the
   // register form uses, so admin-created accounts aren't held to a lower bar.
   const passwordError = checkPassword(password);
   if (passwordError) {
-    return connection.query(listSql, (err, results) => {
-      res.render('admin/users', {
-        users: results || [],
-        success: null,
-        error: passwordError,
-      });
-    });
+    return renderUsersWithError(res, passwordError);
   }
 
   if (role !== 'admin' && role !== 'student' && role !== 'staff') {
@@ -399,13 +419,7 @@ app.post('/admin/users/create', isLoggedIn, isAdmin, (req, res) => {
       return res.status(500).send('Something went wrong. Please try again.');
     }
     if (checkResults.length > 0) {
-      return connection.query(listSql, (err, results) => {
-        res.render('admin/users', {
-          users: results || [],
-          success: null,
-          error: 'That username is already taken.',
-        });
-      });
+      return renderUsersWithError(res, 'That username is already taken.');
     }
 
     const insertSql = 'INSERT INTO users (username, password, email, role) VALUES (?, SHA1(?), ?, ?)';
@@ -768,6 +782,8 @@ app.get('/items/search', isLoggedIn, (req, res) => {
 // My Reports and clicking Edit still lands back on My Reports afterwards,
 // not a generic Browse link. `from` is threaded through as a query param
 // (GET) / hidden field (POST) rather than relying on the Referer header.
+// Owner: shared — used by Hui Xing's item detail page below and Soe San's
+// edit routes further down, so it isn't either one's alone.
 function itemBackTo(from) {
   if (from === 'reports') return { href: '/items/mine', label: 'My Reports' };
   if (from === 'claims') return { href: '/claims/mine', label: 'My Claims' };
@@ -775,6 +791,10 @@ function itemBackTo(from) {
 }
 
 // GET /items/:id — view a single item's detail
+// Owner: Hui Xing — Browse & View Items (Read). Declared down here rather
+// than next to GET /items above so Jun Hao's /items/search can register
+// first (see the route-ordering note in her section above); still her
+// route, not Jun Hao's, despite sitting in between.
 app.get('/items/:id', isLoggedIn, (req, res) => {
   // JOIN users so the detail page can show who reported it.
   const sql = `SELECT i.*, u.username AS reported_by_username
@@ -837,7 +857,7 @@ app.get('/items/:id/edit', isLoggedIn, (req, res) => {
       return res.status(404).send('Item not found.');
     }
     if (!canEditItem(req.session.user, results[0])) {
-      return res.status(403).render('403', {});
+      return res.status(403).render('403', { message: 'You can only edit an item you reported yourself, unless you\'re staff or admin.' });
     }
     const from = req.query.from;
     res.render('items/edit', {
@@ -874,7 +894,7 @@ app.post('/items/:id/edit', isLoggedIn, imageUpload.single('image'), (req, res) 
     const oldItem = results[0];
 
     if (!canEditItem(req.session.user, oldItem)) {
-      return res.status(403).render('403', {});
+      return res.status(403).render('403', { message: 'You can only edit an item you reported yourself, unless you\'re staff or admin.' });
     }
 
     // Same required-field set as Shernice's create form.
@@ -957,7 +977,7 @@ app.get('/items/:id/history', isLoggedIn, (req, res) => {
       return res.status(404).send('Item not found.');
     }
     if (!canEditItem(req.session.user, itemResults[0])) {
-      return res.status(403).render('403', {});
+      return res.status(403).render('403', { message: 'You can only view edit history for an item you reported yourself, unless you\'re staff or admin.' });
     }
 
     // JOIN against users so the log shows who made each edit, not just a
@@ -1034,7 +1054,7 @@ app.post('/items/:id/restore', isLoggedIn, isStaffOrAdmin, (req, res) => {
 // user must not already have a pending claim on it. In either case we send
 // them to the item detail page (which shows the right message) instead of
 // rendering an empty form they can't usefully submit.
-app.get('/items/:id/claim', isLoggedIn, (req, res) => {
+app.get('/items/:id/claim', isLoggedIn, isStudent, (req, res) => {
   const itemId = req.params.id;
   const sql = 'SELECT * FROM items WHERE item_id = ?';
 
@@ -1077,7 +1097,7 @@ app.get('/items/:id/claim', isLoggedIn, (req, res) => {
 // an optional photo (e.g. the claimant holding the item) is extra evidence
 // alongside the required text description, same "optional attachment"
 // pattern already used for reporting and editing an item.
-app.post('/items/:id/claim', isLoggedIn, imageUpload.single('image'), (req, res) => {
+app.post('/items/:id/claim', isLoggedIn, isStudent, imageUpload.single('image'), (req, res) => {
   const { proof_description } = req.body;
   const itemId = req.params.id;
 
@@ -1158,12 +1178,17 @@ app.get('/claims/mine', isLoggedIn, (req, res) => {
   });
 });
 
+// Who's allowed to edit a claim: only the claimant themselves. Unlike
+// canEditItem above, there's NO staff/admin override — a claim is the
+// claimant's own testimony, not a shared record, so only they can touch it.
+function canEditClaim(user, claim) {
+  return claim.claimed_by === user.user_id;
+}
+
 // GET /claims/:id/edit — let a claimant correct their own claim (typo in the
 // description, or attach/replace the photo) — but only while it's still
 // 'pending'. Once staff have approved or rejected it, the decision's
-// already made, so editing afterward doesn't make sense. Unlike editing an
-// item, this is NOT staff/admin-overridable — a claim is the claimant's own
-// testimony, not a shared record, so only they can touch it.
+// already made, so editing afterward doesn't make sense.
 app.get('/claims/:id/edit', isLoggedIn, (req, res) => {
   const claimId = req.params.id;
   const sql = 'SELECT * FROM claims WHERE claim_id = ?';
@@ -1177,8 +1202,8 @@ app.get('/claims/:id/edit', isLoggedIn, (req, res) => {
       return res.status(404).send('Claim not found.');
     }
     const claim = results[0];
-    if (claim.claimed_by !== req.session.user.user_id) {
-      return res.status(403).render('403', {});
+    if (!canEditClaim(req.session.user, claim)) {
+      return res.status(403).render('403', { message: 'You can only edit your own claims.' });
     }
     if (claim.claim_status !== 'pending') {
       // Already reviewed — nothing left to edit. Send them back to My Claims.
@@ -1203,8 +1228,8 @@ app.post('/claims/:id/edit', isLoggedIn, imageUpload.single('image'), (req, res)
       return res.status(404).send('Claim not found.');
     }
     const claim = results[0];
-    if (claim.claimed_by !== req.session.user.user_id) {
-      return res.status(403).render('403', {});
+    if (!canEditClaim(req.session.user, claim)) {
+      return res.status(403).render('403', { message: 'You can only edit your own claims.' });
     }
     if (claim.claim_status !== 'pending') {
       return res.redirect('/claims/mine');
@@ -1341,6 +1366,14 @@ app.post('/claims/:id/review', isLoggedIn, isStaffOrAdmin, (req, res) => {
     }
     const claim = results[0];
 
+    // Guard: can't review your own claim — same self-lockout reasoning as
+    // the admin role-change/disable guards in Firdaus's section (an admin
+    // can't demote/disable themselves). Without this, a staff/admin account
+    // could claim an item and then approve their own claim.
+    if (claim.claimed_by === req.session.user.user_id) {
+      return res.status(403).render('403', { message: 'You cannot review your own claim.' });
+    }
+
     // Record who reviewed it and when, alongside the decision.
     const updateClaimSql = 'UPDATE claims SET claim_status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE claim_id = ?';
     connection.query(updateClaimSql, [decision, req.session.user.user_id, claimId], (updateClaimErr) => {
@@ -1416,7 +1449,10 @@ app.post('/items/:id/collect', isLoggedIn, isStaffOrAdmin, (req, res) => {
 });
 
 // ===================================================================
-// Misc
+// Shared infrastructure — no single owner
+// The root redirect and server startup below aren't any one person's
+// feature, same reasoning as the connection pool/middleware/auth guards
+// at the top of this file.
 // ===================================================================
 
 app.get('/', (req, res) => res.redirect('/items'));
