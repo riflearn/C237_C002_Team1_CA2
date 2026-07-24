@@ -382,6 +382,24 @@ footer {
   margin-top: 0.15rem;
 }
 
+/* Visible #id next to an item/claim name, so staff/students have a stable
+   short reference when talking about a specific report or claim (e.g. over
+   chat) instead of just its name, which isn't unique. .id-tag is for a
+   plain/white background; .id-tag-light is the same thing for text sitting
+   on the colored .browse-hero, where the muted grey would be unreadable. */
+.id-tag {
+  font-weight: 400;
+  font-size: 0.7em;
+  color: var(--text-muted);
+  margin-left: 0.35em;
+}
+.id-tag-light {
+  font-weight: 400;
+  font-size: 0.7em;
+  color: rgba(255,255,255,0.75);
+  margin-left: 0.35em;
+}
+
 /* Empty state */
 .empty-state {
   text-align: center;

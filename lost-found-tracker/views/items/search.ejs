@@ -66,7 +66,7 @@
           </div>
         <% } %>
         <div class="item-info">
-          <div class="item-name"><%= item.item_name %></div>
+          <div class="item-name"><%= item.item_name %> <span class="id-tag">#<%= item.item_id %></span></div>
           <div class="item-meta"><%= item.category %> &middot; <%= item.location_found %> &middot; <%= item.date_found %></div>
         </div>
         <span class="status-badge status-<%= item.status %>"><%= item.status %></span>

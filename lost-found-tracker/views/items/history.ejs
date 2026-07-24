@@ -3,7 +3,7 @@
        what and when for this item. Own page, own route, only touches
        edit.ejs (a link), never Hui Xing's show.ejs. -->
   <div class="card">
-    <h1>Edit History</h1>
+    <h1>Edit History <span class="id-tag">#<%= itemId %></span></h1>
     <a href="/items/<%= itemId %>" class="back-link">&larr; Back to item</a>
 
     <% if (history.length === 0) { %>

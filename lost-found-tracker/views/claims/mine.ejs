@@ -34,10 +34,10 @@
             </div>
           <% } %>
           <div class="item-info">
-            <div class="item-name"><%= claim.item_name %></div>
+            <div class="item-name"><%= claim.item_name %> <span class="id-tag">#<%= claim.item_id %></span></div>
             <div class="item-meta"><%= claim.category %> &middot; <%= claim.location_found %></div>
             <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.25rem;">
-              You wrote: "<%= claim.proof_description %>"
+              Claim #<%= claim.claim_id %> &mdash; You wrote: "<%= claim.proof_description %>"
               <% if (claim.proof_image) { %>
                 &middot; <a href="/images/<%= claim.proof_image %>" target="_blank" rel="noopener">photo attached</a>
               <% } %>

@@ -5,7 +5,7 @@
          to Soe San's edit route, Wei Qi's delete route, and Wei Qi's claim
          form (only one of these should ever show for a given user/status). -->
     <a href="<%= backTo.href %>" class="back-link">&larr; Back to <%= backTo.label %></a>
-    <h1><%= item.item_name %></h1>
+    <h1><%= item.item_name %> <span class="id-tag">#<%= item.item_id %></span></h1>
     <% if (item.image) { %>
       <!-- Shernice's Image Upload feature: display-only here, since the
          upload itself only happens at creation time. -->

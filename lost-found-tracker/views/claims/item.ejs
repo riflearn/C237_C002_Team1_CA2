@@ -2,7 +2,7 @@
 
 <div class="browse-hero">
   <div class="browse-hero-inner">
-    <h1 class="browse-title">Claims for: <%= item.item_name %></h1>
+    <h1 class="browse-title">Claims for: <%= item.item_name %> <span class="id-tag-light">#<%= item.item_id %></span></h1>
     <a href="/claims?category=<%= encodeURIComponent(item.category) %>" class="btn btn-outline">&larr; Back to <%= item.category %></a>
   </div>
 </div>
@@ -43,6 +43,7 @@
         <li class="claim-review-card">
           <div class="claim-review-meta">
             <span class="claim-review-user"><%= claim.claimant_username %></span>
+            <span class="id-tag">Claim #<%= claim.claim_id %></span>
             <span class="claim-review-date"><%= new Date(claim.created_at).toLocaleDateString('en-GB') %></span>
           </div>
           <div class="claim-review-proof">"<%= claim.proof_description %>"</div>

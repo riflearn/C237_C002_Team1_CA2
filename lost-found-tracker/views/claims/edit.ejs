@@ -3,7 +3,7 @@
        claim (typo, or add/replace the photo) while it's still pending. Not
        staff/admin-overridable — see the guard in app.js's GET /claims/:id/edit. -->
   <div class="card">
-    <h1>Edit your claim</h1>
+    <h1>Edit your claim <span class="id-tag">#<%= claim.claim_id %></span></h1>
     <a href="/claims/mine" class="back-link">&larr; Back to My Claims</a>
     <% if (error) { %>
       <p class="error"><%= error %></p>

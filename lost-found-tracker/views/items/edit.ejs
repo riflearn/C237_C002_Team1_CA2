@@ -1,6 +1,6 @@
 <%- include('../partials/header') %>
   <div class="card">
-    <h1>Edit item</h1>
+    <h1>Edit item <span class="id-tag">#<%= item.item_id %></span></h1>
     <a href="<%= backTo.href %>" class="back-link">&larr; Back to <%= backTo.label %></a>
 
     <!-- Soe San — same field set/order as Shernice's views/items/new.ejs,
