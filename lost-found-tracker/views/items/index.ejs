@@ -22,7 +22,7 @@
        does, so this box behaves identically instead of silently doing less
        than the dedicated Search page. -->
   <form class="filters" action="/items/search" method="GET">
-    <input type="text" name="q" list="item-names" placeholder="Search items...">
+    <input type="text" name="q" list="item-names" placeholder="Search items..." autocomplete="off">
     <datalist id="item-names">
       <% itemNames.forEach(name => { %>
         <option value="<%= name %>">

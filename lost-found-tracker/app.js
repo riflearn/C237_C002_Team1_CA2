@@ -610,7 +610,11 @@ app.get('/items', isLoggedIn, (req, res) => {
       // Autocomplete + Recent Searches (Jun Hao's) — same two queries as her
       // /items/search route, run here too so the embedded search box on
       // Browse behaves identically instead of silently doing less.
-      connection.query('SELECT DISTINCT item_name FROM items', (namesErr, namesResults) => {
+      // Removed items are excluded — they're not browsable/searchable, so
+      // suggesting their names would be misleading. Sorted alphabetically
+      // so the suggestion list is easy to scan rather than in insertion order.
+      const namesSql = "SELECT DISTINCT item_name FROM items WHERE status != 'removed' ORDER BY item_name ASC";
+      connection.query(namesSql, (namesErr, namesResults) => {
         if (namesErr) {
           console.error('Database query error:', namesErr.message);
           return res.status(500).send('Something went wrong. Please try again.');
@@ -705,8 +709,11 @@ app.get('/items/search', isLoggedIn, (req, res) => {
 
     // Autocomplete: every distinct item name feeds a native <datalist> in
     // the view, so the browser handles the suggestion dropdown itself —
-    // zero client-side JavaScript, zero extra endpoint.
-    connection.query('SELECT DISTINCT item_name FROM items', (namesErr, namesResults) => {
+    // zero client-side JavaScript, zero extra endpoint. Removed items are
+    // excluded (not browsable/searchable) and results are sorted
+    // alphabetically so the suggestion list is easy to scan.
+    const namesSql = "SELECT DISTINCT item_name FROM items WHERE status != 'removed' ORDER BY item_name ASC";
+    connection.query(namesSql, (namesErr, namesResults) => {
       if (namesErr) {
         console.error('Database query error:', namesErr.message);
         return res.status(500).send('Something went wrong. Please try again.');

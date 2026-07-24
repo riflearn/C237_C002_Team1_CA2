@@ -5,7 +5,7 @@
   <h1>Search Items</h1>
 
   <form class="filters" action="/items/search" method="GET">
-    <input type="text" name="q" list="item-names" placeholder="Search..." value="<%= query.q || '' %>">
+    <input type="text" name="q" list="item-names" placeholder="Search..." value="<%= query.q || '' %>" autocomplete="off">
     <!-- Autocomplete: the browser suggests matching item names from this
          <datalist> as you type — no fetch, no JavaScript. -->
     <datalist id="item-names">
