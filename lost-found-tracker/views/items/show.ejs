@@ -4,7 +4,7 @@
          route in app.js, plus the role-gated action buttons that hand off
          to Soe San's edit route, Wei Qi's delete route, and Wei Qi's claim
          form (only one of these should ever show for a given user/status). -->
-    <p><a href="/items">&larr; Back to Browse</a></p>
+    <a href="<%= backTo.href %>" class="back-link">&larr; Back to <%= backTo.label %></a>
     <h1><%= item.item_name %></h1>
     <% if (item.image) { %>
       <!-- Shernice's Image Upload feature: display-only here, since the
@@ -20,7 +20,7 @@
     <!-- Same rule as app.js's canEditItem: staff/admin can edit any item;
          a student only sees Edit on the item they themselves reported. -->
     <% if (user && (user.role === 'staff' || user.role === 'admin' || item.reported_by === user.user_id)) { %>
-      <a href="/items/<%= item.item_id %>/edit" class="btn">Edit</a>
+      <a href="/items/<%= item.item_id %>/edit<%= from ? '?from=' + from : '' %>" class="btn">Edit</a>
     <% } %>
     <% if (user && (user.role === 'staff' || user.role === 'admin')) { %>
       <% if (item.status === 'removed') { %>

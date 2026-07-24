@@ -4,7 +4,7 @@
        staff/admin-overridable — see the guard in app.js's GET /claims/:id/edit. -->
   <div class="card">
     <h1>Edit your claim</h1>
-    <p><a href="/claims/mine">&larr; Back to My Claims</a></p>
+    <a href="/claims/mine" class="back-link">&larr; Back to My Claims</a>
     <% if (error) { %>
       <p class="error"><%= error %></p>
     <% } %>

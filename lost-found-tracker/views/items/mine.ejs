@@ -40,8 +40,8 @@
             <div class="item-meta"><%= item.category %> &middot; <%= item.location_found %> &middot; <%= item.date_found %></div>
           </div>
           <span class="status-badge status-<%= item.status %>"><%= item.status %></span>
-          <a href="/items/<%= item.item_id %>" class="btn btn-sm">View</a>
-          <a href="/items/<%= item.item_id %>/edit" class="btn btn-sm">Edit</a>
+          <a href="/items/<%= item.item_id %>?from=reports" class="btn btn-sm">View</a>
+          <a href="/items/<%= item.item_id %>/edit?from=reports" class="btn btn-sm">Edit</a>
         </li>
       <% }) %>
     </ul>

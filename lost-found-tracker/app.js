@@ -729,6 +729,17 @@ app.get('/items/search', isLoggedIn, (req, res) => {
   });
 });
 
+// Where "back"/"Edit" links on the item pages should point, based on which
+// "My ..." page (if any) the user actually came from — so e.g. arriving via
+// My Reports and clicking Edit still lands back on My Reports afterwards,
+// not a generic Browse link. `from` is threaded through as a query param
+// (GET) / hidden field (POST) rather than relying on the Referer header.
+function itemBackTo(from) {
+  if (from === 'reports') return { href: '/items/mine', label: 'My Reports' };
+  if (from === 'claims') return { href: '/claims/mine', label: 'My Claims' };
+  return { href: '/items', label: 'Browse' };
+}
+
 // GET /items/:id — view a single item's detail
 app.get('/items/:id', isLoggedIn, (req, res) => {
   // JOIN users so the detail page can show who reported it.
@@ -754,9 +765,12 @@ app.get('/items/:id', isLoggedIn, (req, res) => {
         console.error('Database query error:', claimErr.message);
         return res.status(500).send('Something went wrong. Please try again.');
       }
+      const from = req.query.from;
       res.render('items/show', {
         item: results[0],
         alreadyClaimed: claimResults.length > 0,
+        backTo: itemBackTo(from),
+        from,
       });
     });
   });
@@ -791,7 +805,13 @@ app.get('/items/:id/edit', isLoggedIn, (req, res) => {
     if (!canEditItem(req.session.user, results[0])) {
       return res.status(403).render('403', {});
     }
-    res.render('items/edit', { item: results[0], error: null });
+    const from = req.query.from;
+    res.render('items/edit', {
+      item: results[0],
+      error: null,
+      backTo: from === 'reports' ? itemBackTo(from) : { href: '/items/' + req.params.id, label: 'item' },
+      from,
+    });
   });
 });
 
@@ -800,8 +820,9 @@ app.get('/items/:id/edit', isLoggedIn, (req, res) => {
 // duplicated) — replacing the photo is just one more optional field on this
 // form, not a separate feature.
 app.post('/items/:id/edit', isLoggedIn, imageUpload.single('image'), (req, res) => {
-  const { item_name, category, description, location_found, date_found } = req.body;
+  const { item_name, category, description, location_found, date_found, from } = req.body;
   const itemId = req.params.id;
+  const backTo = from === 'reports' ? itemBackTo(from) : { href: '/items/' + itemId, label: 'item' };
 
   // Fetch the item first — needed both for the edit-permission check below
   // and, if validation fails, to re-render the form pre-filled with the
@@ -827,6 +848,8 @@ app.post('/items/:id/edit', isLoggedIn, imageUpload.single('image'), (req, res) 
       return res.render('items/edit', {
         item: { ...oldItem, ...req.body, item_id: itemId },
         error: 'Please fill in all required fields.',
+        backTo,
+        from,
       });
     }
 
@@ -878,7 +901,7 @@ app.post('/items/:id/edit', isLoggedIn, imageUpload.single('image'), (req, res) 
             // Don't fail the whole edit just because the audit log insert
             // failed — the item itself already saved successfully.
           }
-          res.redirect('/items/' + itemId);
+          res.redirect('/items/' + itemId + (from === 'reports' ? '?from=reports' : ''));
         });
       }
     );

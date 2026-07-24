@@ -4,7 +4,7 @@
        edit.ejs (a link), never Hui Xing's show.ejs. -->
   <div class="card">
     <h1>Edit History</h1>
-    <p><a href="/items/<%= itemId %>">&larr; Back to item</a></p>
+    <a href="/items/<%= itemId %>" class="back-link">&larr; Back to item</a>
 
     <% if (history.length === 0) { %>
       <p>No edits have been made to this item yet.</p>
