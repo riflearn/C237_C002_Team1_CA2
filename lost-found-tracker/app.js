@@ -1,5 +1,5 @@
 // Lost & Found Tracker — C237 CA2
-// Version: 1.0.0
+// Version: 1.1.0
 // Single-file backend: every GET/POST route lives in this file, grouped by
 // feature under the section banners below (each banner names its owner —
 // same people as before, just no longer split into separate routes/*.js
@@ -11,6 +11,7 @@ const session = require('express-session');
 const mysql = require('mysql2');
 const multer = require('multer');
 const path = require('path');
+const { version: appVersion } = require('./package.json');
 
 const app = express();
 
@@ -86,10 +87,13 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 2 }, // 2 hours
 }));
 
-// Makes the logged-in user available in every view (e.g. for the nav bar)
-// without every route having to pass it in manually.
+// Makes the logged-in user (for the nav bar) and the app version (footer)
+// available in every view without every route having to pass them in
+// manually. Version comes from package.json — the single source of truth,
+// so it can't drift out of sync with what's in the footer.
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
+  res.locals.appVersion = appVersion;
   next();
 });
 
