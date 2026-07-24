@@ -933,25 +933,29 @@ app.post('/items/:id/edit', isLoggedIn, imageUpload.single('image'), (req, res) 
         }
 
         // Build a plain-text summary of only the fields that actually
-        // changed, for the audit log.
+        // changed, for the audit log. Every field shows its old and new
+        // value (not just "X changed") so staff can see exactly what was
+        // there before, not just that something was edited.
         const changedFields = [];
         if (oldItem.item_name !== item_name) {
-          changedFields.push(`item_name: '${oldItem.item_name}' -> '${item_name}'`);
+          changedFields.push(`Updated item name from '${oldItem.item_name}' to '${item_name}'`);
         }
         if (oldItem.category !== category) {
-          changedFields.push(`category: '${oldItem.category}' -> '${category}'`);
+          changedFields.push(`Updated category from '${oldItem.category}' to '${category}'`);
         }
         if ((oldItem.description || '') !== (description || '')) {
-          changedFields.push('description changed');
+          changedFields.push(`Updated description from '${oldItem.description || '(none)'}' to '${description || '(none)'}'`);
         }
         if (oldItem.location_found !== location_found) {
-          changedFields.push(`location_found: '${oldItem.location_found}' -> '${location_found}'`);
+          changedFields.push(`Updated location from '${oldItem.location_found}' to '${location_found}'`);
         }
         if (oldItem.date_found !== date_found) {
-          changedFields.push(`date_found: '${oldItem.date_found}' -> '${date_found}'`);
+          changedFields.push(`Updated date found from '${oldItem.date_found}' to '${date_found}'`);
         }
         if (oldItem.image !== image) {
-          changedFields.push('photo changed');
+          // No filenames here — they're meaningless to a reader. Just note
+          // whether this is the item's first photo or a replacement.
+          changedFields.push(oldItem.image ? 'Replaced the photo' : 'Added a photo');
         }
         const changesSummary = changedFields.length > 0 ? changedFields.join('; ') : 'No fields changed';
 
