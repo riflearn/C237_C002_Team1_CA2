@@ -359,15 +359,18 @@ app.post('/profile', isLoggedIn, (req, res) => {
 
 // ===================================================================
 // Firdaus — User Management (admin only)
-// Lets an admin see all registered users, promote/demote their role, and
-// disable/reactivate their login ("delete" a user without a hard DELETE —
-// see the schema comment on users.status for why). An admin cannot change
-// their own role or disable themselves — prevents accidental lockout.
+// Lets an admin see all registered users and promote/demote their role.
+// Creating, disabling, and reactivating accounts below are reassigned to
+// Shernice — the same "create a new record via a form" shape as Report a
+// Found Item, and disable/reactivate is that record's lifecycle counterpart
+// ("delete" a user without a hard DELETE — see the schema comment on
+// users.status for why). An admin cannot change their own role — prevents
+// accidental lockout.
 // ===================================================================
 
-// Shared by GET /admin/users and every validation failure in POST
-// /admin/users/create below — includes `status` since views/admin/users.ejs
-// shows a status badge per row.
+// Shared by Firdaus's GET /admin/users and every validation failure in
+// Shernice's POST /admin/users/create below — includes `status` since
+// views/admin/users.ejs shows a status badge per row.
 const userListSql = 'SELECT user_id, username, email, role, status FROM users ORDER BY role ASC, username ASC';
 
 // Re-fetch the user list and re-render the page with an error — the three
@@ -394,6 +397,8 @@ app.get('/admin/users', isLoggedIn, isAdmin, (req, res) => {
 });
 
 // POST /admin/users/create — admin creates a new account with any role
+// Owner: Shernice — reassigned from Firdaus; creating a new account is the
+// same "create a new record via a form" shape as Report a Found Item.
 app.post('/admin/users/create', isLoggedIn, isAdmin, (req, res) => {
   const { username, email, password, role } = req.body;
 
@@ -458,13 +463,14 @@ app.post('/admin/users/:id/role', isLoggedIn, isAdmin, (req, res) => {
 });
 
 // POST /admin/users/:id/delete — "delete" a user
-// Not a hard DELETE: items.reported_by, claims.claimed_by/reviewed_by,
-// item_edit_log.edited_by and search_history.user_id all have a FOREIGN KEY
-// on users.user_id, so a real DELETE would fail the moment that user has
-// done anything at all in the app — same reason Wei Qi's item delete is a
-// soft delete. Flipping status to 'disabled' blocks them from logging in
-// (see the status check in POST /login) while keeping every row they're
-// linked to intact.
+// Owner: Shernice — reassigned from Firdaus, the lifecycle counterpart to
+// creating an account above. Not a hard DELETE: items.reported_by,
+// claims.claimed_by/reviewed_by, item_edit_log.edited_by and
+// search_history.user_id all have a FOREIGN KEY on users.user_id, so a real
+// DELETE would fail the moment that user has done anything at all in the
+// app — same reason Hui Xing's item delete is a soft delete. Flipping
+// status to 'disabled' blocks them from logging in (see the status check
+// in POST /login) while keeping every row they're linked to intact.
 app.post('/admin/users/:id/delete', isLoggedIn, isAdmin, (req, res) => {
   const targetId = parseInt(req.params.id);
 
@@ -485,6 +491,7 @@ app.post('/admin/users/:id/delete', isLoggedIn, isAdmin, (req, res) => {
 });
 
 // POST /admin/users/:id/reactivate — undo a delete
+// Owner: Shernice — same reassignment reasoning as delete above.
 app.post('/admin/users/:id/reactivate', isLoggedIn, isAdmin, (req, res) => {
   const sql = "UPDATE users SET status = 'active' WHERE user_id = ?";
   connection.query(sql, [req.params.id], (error) => {
@@ -999,8 +1006,12 @@ app.get('/items/:id/history', isLoggedIn, (req, res) => {
 });
 
 // ===================================================================
-// Wei Qi — Remove Item (Delete) + Restore
-// Staff or admin can remove an item and bring it back — not admin-only.
+// Hui Xing — Remove Item (Delete) + Restore
+// Reassigned from Wei Qi so the "Removed" tab is a complete story under one
+// owner — GET /items above already contains the logic that hides removed
+// items from non-staff, so the routes that actually flip that status now
+// live with the same person. Staff or admin can remove an item and bring
+// it back — not admin-only.
 // ===================================================================
 
 // POST /items/:id/delete — staff/admin removal, requires typing "delete" to
@@ -1042,11 +1053,12 @@ app.post('/items/:id/restore', isLoggedIn, isStaffOrAdmin, (req, res) => {
 });
 
 // ===================================================================
-// Wei Qi — Claim Verification Workflow (core feature, sole owner)
-// Covers both halves: students submitting a claim below, and the
-// staff-only review queue further down. Paired with Remove Item above —
-// both are staff/verification-flavored responsibilities, though claim
-// *submission* itself is open to any logged-in student, not staff-only.
+// Wei Qi — Claim Verification Workflow (core feature)
+// Covers both halves: students submitting a claim below, and most of the
+// staff-only review workflow further down — except the pending-claims
+// queue itself (GET /claims), reassigned to Jun Hao below, since grouping
+// and filtering that queue by category is the same shape of work as her
+// Search & Filter page, even though the underlying data is claims.
 // ===================================================================
 
 // GET /items/:id/claim — show the claim form.
@@ -1259,6 +1271,9 @@ app.post('/claims/:id/edit', isLoggedIn, imageUpload.single('image'), (req, res)
 });
 
 // GET /claims — staff view: browse pending claims grouped by category.
+// Owner: Jun Hao — reassigned from Wei Qi's Claim Verification Workflow;
+// grouping/filtering this queue by category is the same kind of work as
+// her Search & Filter page, just applied to claims instead of items.
 app.get('/claims', isLoggedIn, isStaffOrAdmin, (req, res) => {
   const activeCategory = req.query.category || null;
 
